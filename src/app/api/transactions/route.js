@@ -116,7 +116,7 @@ export async function POST(request) {
       user.accounts.find((item) => item.id === body.accountId) || user.accounts[0];
     if (!account) {
       return NextResponse.json(
-        { message: "No account found for this user." },
+        { message: "No account found for that user." },
         { status: 400 }
       );
     }
