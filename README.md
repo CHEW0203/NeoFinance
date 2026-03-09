@@ -10,37 +10,47 @@ Starter project for a personal finance tracking and analysis website built with:
 
 ## Quick Start
 
-1. Install dependencies:
+1. Clone repository
+   
+```bash
+git clone https://github.com/xxx/project.git
+```
+2. Enter the project folder
+   
+```bash
+cd Financial-Tracker-and-Analysis
+```
+3. Install dependencies:
 
 ```bash
 npm install
 ```
 
-2. Create your environment file:
+4. Create your environment file:
 
 ```bash
 copy .env.example .env
 ```
 
-3. Generate the Prisma client:
+5. Generate the Prisma client:
 
 ```bash
 npm run db:generate
 ```
 
-4. Create the local database:
+6. Create the local database:
 
 ```bash
 npm run db:push
 ```
 
-5. Optional demo data:
+7. Optional demo data:
 
 ```bash
 npm run db:seed
 ```
 
-6. Start the development server:
+8. Start the development server:
 
 ```bash
 npm run dev
