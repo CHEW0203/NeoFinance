@@ -64,11 +64,11 @@ export default async function Home() {
 
           <Link
             href={plusHref}
-            className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-rose-400 bg-rose-300 text-5xl font-bold leading-none text-white shadow-[0_18px_40px_-20px_rgba(251,113,133,0.8)] transition hover:bg-rose-200"
+            className="relative -top-1 -left-1 flex h-16 w-16 items-center justify-center rounded-full border-2 border-rose-400 bg-rose-300 text-5xl font-bold leading-none text-white shadow-[0_18px_40px_-20px_rgba(251,113,133,0.8)] transition hover:bg-rose-200"
             aria-label="Add transaction"
             title="Add transaction"
           >
-            +
+            <span className="relative -top-1">+</span>
           </Link>
         </div>
 
@@ -102,7 +102,11 @@ export default async function Home() {
                 </header>
                 <div className="divide-y divide-slate-200">
                   {group.items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between px-5 py-4">
+                    <Link
+                      key={item.id}
+                      href={`/transactions?recordId=${item.id}`}
+                      className="flex items-center justify-between px-5 py-4 transition hover:bg-slate-50"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xl">
                           {categoryIcon(item.category?.name)}
@@ -118,7 +122,7 @@ export default async function Home() {
                         {item.type === "income" ? "+" : "-"}
                         {formatCurrency(item.amount, "RM")}
                       </p>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </article>

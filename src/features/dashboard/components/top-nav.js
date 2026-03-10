@@ -18,7 +18,7 @@ export function TopNav({ monthLabel, currentUser }) {
 
   return (
     <>
-      <nav className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <nav className="grid grid-cols-[44px_1fr_64px] items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -27,8 +27,10 @@ export function TopNav({ monthLabel, currentUser }) {
         >
           ≡
         </button>
-        <p className="text-lg font-semibold tracking-tight text-slate-900">{monthLabel}</p>
-        <div className="flex items-center gap-3 text-2xl text-slate-800">
+        <p className="pl-3 text-center text-lg font-semibold tracking-tight text-slate-900">
+          {monthLabel}
+        </p>
+        <div className="flex items-center justify-end gap-3 text-2xl text-slate-800">
           <Link href="/notifications" aria-label="Notification" title="Notification">
             🔔
           </Link>

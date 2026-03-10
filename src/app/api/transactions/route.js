@@ -102,6 +102,9 @@ export async function POST(request) {
     const title = String(body.title || "").trim();
     const type = String(body.type || "").trim().toLowerCase();
     const note = body.note ? String(body.note).trim() : null;
+    const categoryName = body.categoryName
+      ? String(body.categoryName).trim()
+      : null;
     const amount = toPositiveNumber(body.amount);
     const transactionDate = body.transactionDate
       ? new Date(body.transactionDate)
@@ -140,9 +143,9 @@ export async function POST(request) {
 
     const defaultCategory =
       user.categories.find((item) => item.type === type) || user.categories[0];
-    const category =
+    const selectedCategory =
       user.categories.find((item) => item.id === body.categoryId) || defaultCategory;
-    if (!category) {
+    if (!selectedCategory && !categoryName) {
       return NextResponse.json(
         { message: "No category found for this user." },
         { status: 400 }
@@ -150,6 +153,19 @@ export async function POST(request) {
     }
 
     const transaction = await prisma.$transaction(async (tx) => {
+      let categoryId = selectedCategory?.id;
+      if (!categoryId && categoryName) {
+        const createdCategory = await tx.category.create({
+          data: {
+            name: categoryName,
+            type,
+            userId: user.id,
+          },
+          select: { id: true },
+        });
+        categoryId = createdCategory.id;
+      }
+
       const created = await tx.transaction.create({
         data: {
           title,
@@ -159,7 +175,7 @@ export async function POST(request) {
           transactionDate,
           userId: user.id,
           accountId: account.id,
-          categoryId: category.id,
+          categoryId,
         },
         include: {
           account: { select: { id: true, name: true, currency: true, type: true } },

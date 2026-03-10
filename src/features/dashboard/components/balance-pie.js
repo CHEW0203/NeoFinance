@@ -28,10 +28,10 @@ export function BalancePie({ totalBalance = 0, monthlyExpense = 0, currency = "R
               {formatCurrency(balance, currency)}
             </p>
             <p className="mt-2 text-sm text-slate-500">
-            Spent this month:
-            <span className="block font-medium">
-            {formatCurrency(spent, currency)}
-            </span>
+              Spent this month:
+              <span className="block font-semibold text-amber-500">
+                {formatCurrency(spent, currency)}
+              </span>
             </p>
           </div>
         </div>
