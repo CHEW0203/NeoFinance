@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/hooks/use-language";
 
 export function BackButton({ fallbackHref = "/", preferFallback = false }) {
   const router = useRouter();
+  const { t } = useLanguage();
 
   function handleBack() {
     if (preferFallback) {
@@ -24,7 +26,7 @@ export function BackButton({ fallbackHref = "/", preferFallback = false }) {
       className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:text-slate-950"
     >
       <span aria-hidden="true">←</span>
-      Back
+      {t.common.back}
     </button>
   );
 }

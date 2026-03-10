@@ -2,19 +2,27 @@ import Link from "next/link";
 import { BalancePie } from "@/features/dashboard/components/balance-pie";
 import { TopNav } from "@/features/dashboard/components/top-nav";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
+import { getLocaleFromLanguage } from "@/lib/i18n";
+import { getServerDictionary } from "@/lib/i18n/server";
 import { formatCurrency } from "@/utils/format";
 
 function categoryIcon(category) {
   if (category?.icon) return category.icon;
-  const name = category?.name;
-  const value = String(name || "").toLowerCase();
+  const value = String(category?.name || "").toLowerCase();
+  if (value.includes("salary")) return "💼";
+  if (value.includes("allowance")) return "💰";
+  if (value.includes("bonus")) return "🏆";
+  if (value.includes("income")) return "📈";
   if (value.includes("food")) return "🍜";
   if (value.includes("transport")) return "🚌";
   if (value.includes("gift")) return "🎁";
+  if (category?.type === "income") return "💼";
   return "📦";
 }
 
 export default async function Home() {
+  const { language, t } = await getServerDictionary();
+  const locale = getLocaleFromLanguage(language);
   const snapshot = await getDashboardSnapshot();
   const currentUser = snapshot?.user || null;
   const stats = snapshot?.stats || {
@@ -33,7 +41,7 @@ export default async function Home() {
     if (!dateMap.has(key)) {
       const group = {
         key,
-        label: new Date(row.transactionDate).toLocaleDateString(undefined, {
+        label: new Date(row.transactionDate).toLocaleDateString(locale, {
           weekday: "short",
           month: "short",
           day: "numeric",
@@ -47,7 +55,7 @@ export default async function Home() {
     dateMap.get(key).items.push(row);
   }
 
-  const monthLabel = new Date().toLocaleDateString(undefined, {
+  const monthLabel = new Date().toLocaleDateString(locale, {
     month: "short",
     year: "numeric",
   });
@@ -62,13 +70,14 @@ export default async function Home() {
             totalBalance={stats.totalBalance}
             monthlyExpense={stats.monthlyExpense}
             currency={stats.currency === "MYR" ? "RM" : stats.currency}
+            labels={t.dashboard}
           />
 
           <Link
             href={plusHref}
             className="relative -top-1 -left-1 flex h-16 w-16 items-center justify-center rounded-full border-2 border-rose-400 bg-rose-300 text-5xl font-bold leading-none text-white shadow-[0_18px_40px_-20px_rgba(251,113,133,0.8)] transition hover:bg-rose-200"
-            aria-label="Add transaction"
-            title="Add transaction"
+            aria-label={t.dashboard.addTransaction}
+            title={t.dashboard.addTransaction}
           >
             <span className="relative -top-1">+</span>
           </Link>
@@ -77,7 +86,7 @@ export default async function Home() {
         <section className="space-y-4 pb-8">
           {dateGroups.length === 0 ? (
             <div className="rounded-3xl border border-slate-300 bg-white p-5 text-center text-sm text-slate-500">
-              No transactions yet. Tap + to add your first record.
+              {t.dashboard.noTransactions}
             </div>
           ) : null}
 
@@ -115,7 +124,7 @@ export default async function Home() {
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900">
-                            {item.category?.name || "Others"}
+                            {item.category?.name || t.dashboard.others}
                           </p>
                           <p className="text-sm text-slate-500">{item.title}</p>
                         </div>

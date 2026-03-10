@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { BackButton } from "@/components/back-button";
 import { formatCurrency } from "@/utils/format";
+import { useLanguage } from "@/hooks/use-language";
+import { getLocaleFromLanguage } from "@/lib/i18n";
 
 function getMonthBounds(baseDate) {
   const year = baseDate.getFullYear();
@@ -17,6 +19,8 @@ function toKey(date) {
 }
 
 export default function CalendarPage() {
+  const { language, t } = useLanguage();
+  const locale = getLocaleFromLanguage(language);
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [records, setRecords] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -53,7 +57,7 @@ export default function CalendarPage() {
     return map;
   }, [records]);
 
-  const monthLabel = currentMonth.toLocaleDateString(undefined, {
+  const monthLabel = currentMonth.toLocaleDateString(locale, {
     month: "long",
     year: "numeric",
   });
@@ -68,15 +72,11 @@ export default function CalendarPage() {
   const selectedRecords = grouped.get(selectedKey) || [];
 
   function goPrev() {
-    setCurrentMonth(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
-    );
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
   }
 
   function goNext() {
-    setCurrentMonth(
-      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
-    );
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   }
 
   function onTouchStart(event) {
@@ -151,7 +151,7 @@ export default function CalendarPage() {
 
         <section className="rounded-3xl border border-slate-300 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-900">
-            {new Date(selectedDate).toLocaleDateString(undefined, {
+            {new Date(selectedDate).toLocaleDateString(locale, {
               weekday: "long",
               month: "short",
               day: "numeric",
@@ -160,7 +160,7 @@ export default function CalendarPage() {
           </h2>
           <div className="mt-4 space-y-3">
             {selectedRecords.length === 0 ? (
-              <p className="text-sm text-slate-500">No records for this day.</p>
+              <p className="text-sm text-slate-500">{t.pages.noRecordsForDay}</p>
             ) : null}
             {selectedRecords.map((item) => (
               <div
@@ -169,7 +169,7 @@ export default function CalendarPage() {
               >
                 <div>
                   <p className="font-semibold text-slate-900">
-                    {item.category?.name || "Others"}
+                    {item.category?.name || t.dashboard.others}
                   </p>
                   <p className="text-sm text-slate-500">{item.title}</p>
                 </div>

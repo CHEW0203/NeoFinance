@@ -81,7 +81,7 @@ export async function GET(request) {
         orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
         include: {
           account: { select: { id: true, name: true, currency: true, type: true } },
-          category: { select: { id: true, name: true, type: true, color: true } },
+          category: { select: { id: true, name: true, type: true, color: true, icon: true } },
         },
       });
 
@@ -94,7 +94,7 @@ export async function GET(request) {
     // Search logic with relevance scoring
     const include = {
       account: { select: { id: true, name: true, currency: true, type: true } },
-      category: { select: { id: true, name: true, type: true, color: true } },
+      category: { select: { id: true, name: true, type: true, color: true, icon: true } },
     };
 
     // Priority 1: Title contains query (exact or partial)
@@ -195,7 +195,7 @@ export async function GET(request) {
         });
 
         const whereSql = tokenClauses.join(" AND ");
-        const sql = `SELECT t.*, c.id as category_id, c.name as category_name, c.type as category_type, c.color as category_color, a.id as account_id, a.name as account_name, a.currency as account_currency, a.type as account_type FROM "Transaction" t LEFT JOIN "Account" a ON t."accountId" = a.id LEFT JOIN "Category" c ON t."categoryId" = c.id WHERE t."userId" = ? AND (${whereSql}) ORDER BY t."transactionDate" DESC, t."createdAt" DESC LIMIT ${limit}`;
+        const sql = `SELECT t.*, c.id as category_id, c.name as category_name, c.type as category_type, c.color as category_color, c.icon as category_icon, a.id as account_id, a.name as account_name, a.currency as account_currency, a.type as account_type FROM "Transaction" t LEFT JOIN "Account" a ON t."accountId" = a.id LEFT JOIN "Category" c ON t."categoryId" = c.id WHERE t."userId" = ? AND (${whereSql}) ORDER BY t."transactionDate" DESC, t."createdAt" DESC LIMIT ${limit}`;
 
         const rows = await prisma.$queryRawUnsafe(sql, ...params);
         const mapped = (rows || []).map((r) => ({
@@ -211,7 +211,15 @@ export async function GET(request) {
           accountId: r.accountId,
           categoryId: r.categoryId,
           account: r.account_id ? { id: r.account_id, name: r.account_name, currency: r.account_currency, type: r.account_type } : null,
-          category: r.category_id ? { id: r.category_id, name: r.category_name, type: r.category_type, color: r.category_color } : null,
+          category: r.category_id
+            ? {
+                id: r.category_id,
+                name: r.category_name,
+                type: r.category_type,
+                color: r.category_color,
+                icon: r.category_icon,
+              }
+            : null,
         }));
         if (mapped.length > 0) {
           return NextResponse.json({ data: mapped, count: mapped.length });

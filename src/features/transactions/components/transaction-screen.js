@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
+import { useLanguage } from "@/hooks/use-language";
 
 const CATEGORY_ICON_MAP = {
   food: "🍜",
@@ -58,6 +59,7 @@ function parseApiError(error, fallback) {
 
 export function TransactionScreen({ recordId }) {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [mode, setMode] = useState("expense");
   const [title, setTitle] = useState("");
@@ -72,7 +74,6 @@ export function TransactionScreen({ recordId }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isBootstrapping, setIsBootstrapping] = useState(Boolean(recordId));
-
   const [showCategoryCreator, setShowCategoryCreator] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryIcon, setNewCategoryIcon] = useState(EXPENSE_ICON_CHOICES[0]);
@@ -87,19 +88,16 @@ export function TransactionScreen({ recordId }) {
     [categories, mode]
   );
   const customIconChoices = mode === "income" ? INCOME_ICON_CHOICES : EXPENSE_ICON_CHOICES;
-
   const pageBackgroundClass =
     mode === "income"
       ? "bg-[radial-gradient(circle_at_top,#dff4ff_0%,#bfe8ff_45%,#9fdfff_100%)]"
       : "bg-[radial-gradient(circle_at_top,#fff7d6_0%,#ffe790_52%,#ffd158_100%)]";
 
   async function loadCategoriesAndDefaults() {
-    const response = await fetch("/api/categories", {
-      cache: "no-store",
-    });
+    const response = await fetch("/api/categories", { cache: "no-store" });
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload.message || "Failed to load categories.");
+      throw new Error(payload.message || t.transactions.loadCategoriesFailed);
     }
 
     const rows = (payload.data || []).map((item) => ({
@@ -113,7 +111,7 @@ export function TransactionScreen({ recordId }) {
     const response = await fetch(`/api/transactions/${id}`, { cache: "no-store" });
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload.message || "Failed to load record.");
+      throw new Error(payload.message || t.transactions.loadRecordFailed);
     }
     const row = payload.data;
     setMode(row.type);
@@ -132,12 +130,13 @@ export function TransactionScreen({ recordId }) {
           await loadRecord(recordId);
         }
       } catch (requestError) {
-        setError(parseApiError(requestError, "Failed to initialize form."));
+        setError(parseApiError(requestError, t.transactions.initFailed));
       } finally {
         setIsBootstrapping(false);
       }
     }
     bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordId]);
 
   useEffect(() => {
@@ -179,13 +178,13 @@ export function TransactionScreen({ recordId }) {
     setSuccess("");
 
     if (!selectedCategoryId) {
-      setError("Please select a category.");
+      setError(t.transactions.selectCategory);
       return;
     }
 
     const category = categories.find((item) => item.id === selectedCategoryId);
     if (!category) {
-      setError("Category not found.");
+      setError(t.transactions.categoryNotFound);
       return;
     }
 
@@ -211,17 +210,17 @@ export function TransactionScreen({ recordId }) {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.message || "Failed to save record.");
+        throw new Error(result.message || t.transactions.saveFailed);
       }
 
-      setSuccess(isEditing ? "Record updated." : "Record added.");
+      setSuccess(isEditing ? t.transactions.recordUpdated : t.transactions.recordAdded);
       if (!isEditing) {
         setAmount("");
       }
       router.push("/");
       router.refresh();
     } catch (requestError) {
-      setError(parseApiError(requestError, "Failed to save record."));
+      setError(parseApiError(requestError, t.transactions.saveFailed));
     } finally {
       setIsSaving(false);
     }
@@ -237,13 +236,13 @@ export function TransactionScreen({ recordId }) {
       });
       const result = await response.json();
       if (!response.ok) {
-        throw new Error(result.message || "Failed to delete record.");
+        throw new Error(result.message || t.transactions.deleteFailed);
       }
       setShowDeleteConfirm(false);
       router.push("/");
       router.refresh();
     } catch (requestError) {
-      setError(parseApiError(requestError, "Failed to delete record."));
+      setError(parseApiError(requestError, t.transactions.deleteFailed));
     } finally {
       setIsDeleting(false);
     }
@@ -260,13 +259,13 @@ export function TransactionScreen({ recordId }) {
       });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.message || "Failed to delete category.");
+        throw new Error(payload.message || t.transactions.deleteCategoryFailed);
       }
       setShowDeleteCategoryConfirm(false);
       setSelectedCategoryId("");
       await loadCategoriesAndDefaults();
     } catch (requestError) {
-      setError(parseApiError(requestError, "Failed to delete category."));
+      setError(parseApiError(requestError, t.transactions.deleteCategoryFailed));
       setShowDeleteCategoryConfirm(false);
     }
   }
@@ -276,7 +275,7 @@ export function TransactionScreen({ recordId }) {
       <main className={`min-h-screen ${pageBackgroundClass} px-4 py-6 text-slate-900 sm:px-6`}>
         <div className="mx-auto w-full max-w-3xl">
           <BackButton fallbackHref="/" preferFallback />
-          <p className="mt-6 text-sm text-slate-700">Loading record...</p>
+          <p className="mt-6 text-sm text-slate-700">{t.transactions.loadingRecord}</p>
         </div>
       </main>
     );
@@ -295,7 +294,7 @@ export function TransactionScreen({ recordId }) {
                 mode === "expense" ? "bg-amber-300 text-slate-900" : "text-slate-700"
               }`}
             >
-              Expense
+              {t.transactions.expense}
             </button>
             <button
               type="button"
@@ -304,7 +303,7 @@ export function TransactionScreen({ recordId }) {
                 mode === "income" ? "bg-cyan-300 text-slate-900" : "text-slate-700"
               }`}
             >
-              Income
+              {t.transactions.income}
             </button>
           </div>
 
@@ -314,8 +313,8 @@ export function TransactionScreen({ recordId }) {
               onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
               className="text-2xl"
-              aria-label="Delete record"
-              title="Delete record"
+              aria-label={t.transactions.deleteRecord}
+              title={t.transactions.deleteRecord}
             >
               🗑️
             </button>
@@ -330,10 +329,10 @@ export function TransactionScreen({ recordId }) {
               type="button"
               onClick={openCategoryCreator}
               className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-slate-300 bg-slate-100 py-2"
-              title="Add custom category"
+              title={t.transactions.addCustomCategory}
             >
               <span className="text-2xl">+</span>
-              <span className="text-xs font-semibold text-slate-700">Add</span>
+              <span className="text-xs font-semibold text-slate-700">{t.transactions.add}</span>
             </button>
             {filteredCategories.map((item) => (
               <button
@@ -362,7 +361,7 @@ export function TransactionScreen({ recordId }) {
                 onClick={() => setShowDeleteCategoryConfirm(true)}
                 className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
               >
-                Delete selected category
+                {t.transactions.deleteCategory}
               </button>
             </div>
           ) : null}
@@ -387,7 +386,7 @@ export function TransactionScreen({ recordId }) {
               min="0.01"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              placeholder="RM amount"
+              placeholder={t.transactions.amountPlaceholder}
               className="rounded-2xl border border-slate-300 px-4 py-3 text-xl font-semibold outline-none focus:border-slate-800"
               required
             />
@@ -396,7 +395,7 @@ export function TransactionScreen({ recordId }) {
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="Record title"
+            placeholder={t.transactions.recordTitle}
             className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium outline-none focus:border-slate-800"
           />
 
@@ -405,7 +404,11 @@ export function TransactionScreen({ recordId }) {
             disabled={isSaving}
             className="w-full rounded-2xl bg-cyan-500 px-4 py-3 text-lg font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Saving..." : isEditing ? "Update Record" : "Add Record"}
+            {isSaving
+              ? t.transactions.saving
+              : isEditing
+                ? t.transactions.updateRecord
+                : t.transactions.addRecord}
           </button>
         </form>
 
@@ -430,11 +433,11 @@ export function TransactionScreen({ recordId }) {
                   type="button"
                   onClick={() => setShowCategoryCreator(false)}
                   className="text-3xl leading-none"
-                  aria-label="Back"
+                  aria-label={t.common.back}
                 >
                   ←
                 </button>
-                <h2 className="text-3xl font-semibold">New Category</h2>
+                <h2 className="text-3xl font-semibold">{t.transactions.newCategory}</h2>
                 <div className="w-8" />
               </header>
 
@@ -445,7 +448,7 @@ export function TransactionScreen({ recordId }) {
                     type="text"
                     value={newCategoryName}
                     onChange={(event) => setNewCategoryName(event.target.value)}
-                    placeholder="Tap to enter the name"
+                    placeholder={t.transactions.enterCategoryName}
                     className="w-full bg-transparent text-lg font-semibold text-slate-700 outline-none"
                   />
                 </div>
@@ -475,7 +478,7 @@ export function TransactionScreen({ recordId }) {
                 onClick={confirmCustomCategory}
                 className="w-full rounded-2xl border-2 border-slate-900 bg-amber-300 px-4 py-3 text-2xl font-semibold text-slate-900"
               >
-                OK
+                {t.common.ok}
               </button>
             </div>
           </div>
@@ -485,17 +488,15 @@ export function TransactionScreen({ recordId }) {
       {showDeleteConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-sm rounded-3xl border-2 border-slate-900 bg-white p-5">
-            <h3 className="text-xl font-semibold text-slate-900">Delete this record?</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              This action cannot be undone.
-            </p>
+            <h3 className="text-xl font-semibold text-slate-900">{t.transactions.deleteRecordTitle}</h3>
+            <p className="mt-2 text-sm text-slate-600">{t.transactions.deleteRecordDesc}</p>
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
                 className="flex-1 rounded-2xl border border-slate-300 px-4 py-2 font-semibold text-slate-700"
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -503,7 +504,7 @@ export function TransactionScreen({ recordId }) {
                 disabled={isDeleting}
                 className="flex-1 rounded-2xl bg-rose-500 px-4 py-2 font-semibold text-white disabled:opacity-60"
               >
-                OK
+                {t.common.ok}
               </button>
             </div>
           </div>
@@ -513,24 +514,24 @@ export function TransactionScreen({ recordId }) {
       {showDeleteCategoryConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-sm rounded-3xl border-2 border-slate-900 bg-white p-5">
-            <h3 className="text-xl font-semibold text-slate-900">Delete this category?</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Existing records under this category will be moved safely.
-            </p>
+            <h3 className="text-xl font-semibold text-slate-900">
+              {t.transactions.deleteCategoryTitle}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">{t.transactions.deleteCategoryDesc}</p>
             <div className="mt-5 flex gap-3">
               <button
                 type="button"
                 onClick={() => setShowDeleteCategoryConfirm(false)}
                 className="flex-1 rounded-2xl border border-slate-300 px-4 py-2 font-semibold text-slate-700"
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleDeleteCategoryConfirmed}
                 className="flex-1 rounded-2xl bg-rose-500 px-4 py-2 font-semibold text-white"
               >
-                OK
+                {t.common.ok}
               </button>
             </div>
           </div>

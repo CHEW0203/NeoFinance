@@ -4,9 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useLoginForm } from "@/hooks/use-auth-form";
 import { BackButton } from "@/components/back-button";
+import { useLanguage } from "@/hooks/use-language";
 
 export function LoginScreen({ nextPath = "/transactions" }) {
-  const { form, setForm, error, isSubmitting, submit } = useLoginForm(nextPath);
+  const { t } = useLanguage();
+  const { form, setForm, error, isSubmitting, submit } = useLoginForm(nextPath, {
+    loginFailed: t.auth.loginFailed,
+  });
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -15,20 +19,17 @@ export function LoginScreen({ nextPath = "/transactions" }) {
         <section className="rounded-[2rem] border border-white/70 bg-white/85 p-8 shadow-[0_28px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur">
           <BackButton fallbackHref="/" />
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-700">
-            NeoFinance Access
+            {t.auth.access}
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
-            Login to protect your financial privacy
+            {t.auth.loginTitle}
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">
-            Your records stay tied to your account so only you can manage budgets,
-            transactions, and personal reports.
-          </p>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">{t.auth.loginDesc}</p>
 
           <form className="mt-8 space-y-4" onSubmit={submit}>
             <input
               type="text"
-              placeholder="Username"
+              placeholder={t.auth.username}
               value={form.username}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, username: event.target.value }))
@@ -39,7 +40,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder={t.auth.password}
                 value={form.password}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, password: event.target.value }))
@@ -51,8 +52,8 @@ export function LoginScreen({ nextPath = "/transactions" }) {
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-800"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+                title={showPassword ? t.auth.hidePassword : t.auth.showPassword}
               >
                 {showPassword ? (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -88,7 +89,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
                 }
                 className="h-4 w-4"
               />
-              Remember me
+              {t.auth.rememberMe}
             </label>
 
             <button
@@ -96,7 +97,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
               disabled={isSubmitting}
               className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Signing in..." : "Login"}
+              {isSubmitting ? t.auth.signingIn : t.common.login}
             </button>
           </form>
 
@@ -107,9 +108,9 @@ export function LoginScreen({ nextPath = "/transactions" }) {
           ) : null}
 
           <p className="mt-6 text-sm text-slate-600">
-            No account yet?{" "}
+            {t.auth.noAccount}{" "}
             <Link href="/register" className="font-semibold text-indigo-700">
-              Register here
+              {t.auth.registerHere}
             </Link>
           </p>
         </section>

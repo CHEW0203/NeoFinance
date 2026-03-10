@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logoutUser } from "@/services/auth-api";
 import { TransactionList } from "@/features/transactions/components";
+import { useLanguage } from "@/hooks/use-language";
 
 export function TopNav({ monthLabel, currentUser }) {
   const router = useRouter();
+  const { language, setLanguage, t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,46 +25,57 @@ export function TopNav({ monthLabel, currentUser }) {
   }
 
   useEffect(() => {
-    // perform live search synchronously while typing
-    if (!searchOpen) return;
+    if (!searchOpen || !currentUser) return undefined;
 
-    async function runSearch(q) {
+    const timer = setTimeout(async () => {
       if (searchAbortRef.current) {
-        try { searchAbortRef.current.abort(); } catch (e) {}
+        try {
+          searchAbortRef.current.abort();
+        } catch {}
       }
+
       const controller = new AbortController();
       searchAbortRef.current = controller;
       setIsSearching(true);
+
       try {
-        const url = q ? `/api/transactions?q=${encodeURIComponent(q)}&limit=200` : "/api/transactions?limit=200";
-        const res = await fetch(url, { 
-          signal: controller.signal, 
+        const url = searchQuery
+          ? `/api/transactions?q=${encodeURIComponent(searchQuery)}&limit=50`
+          : "/api/transactions?limit=50";
+        const response = await fetch(url, {
+          signal: controller.signal,
           cache: "no-store",
-          credentials: "include"
+          credentials: "include",
         });
-        if (!res.ok) {
-          throw new Error(`API returned ${res.status}`);
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`);
         }
-        const data = await res.json();
-        setSearchResults(data.data || []);
-      } catch (err) {
-        if (err.name === 'AbortError') return;
-        console.error("Search error:", err);
+        const payload = await response.json();
+        setSearchResults(payload.data || []);
+      } catch (error) {
+        if (error?.name === "AbortError") return;
         setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }
+    }, 250);
 
-    runSearch(searchQuery);
-    
     return () => {
+      clearTimeout(timer);
       if (searchAbortRef.current) {
-        try { searchAbortRef.current.abort(); } catch (e) {}
+        try {
+          searchAbortRef.current.abort();
+        } catch {}
         searchAbortRef.current = null;
       }
     };
-  }, [searchQuery, searchOpen]);
+  }, [searchQuery, searchOpen, currentUser]);
+
+  function closeSearch() {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  }
 
   return (
     <>
@@ -71,47 +84,57 @@ export function TopNav({ monthLabel, currentUser }) {
           type="button"
           onClick={() => setOpen(true)}
           className="text-2xl leading-none text-slate-800"
-          aria-label="Open menu"
+          aria-label={t.menu.menu}
         >
-          ≡
+          ☰
         </button>
         <p className="pl-3 text-center text-lg font-semibold tracking-tight text-slate-900">
           {monthLabel}
         </p>
         <div className="flex items-center justify-end gap-3 text-2xl text-slate-800">
-          <Link href="/notifications" aria-label="Notification" title="Notification">
+          <Link
+            href="/notifications"
+            aria-label={t.menu.notification}
+            title={t.menu.notification}
+          >
             🔔
           </Link>
-          <Link href="/calendar" aria-label="Calendar" title="Calendar">
+          <Link href="/calendar" aria-label={t.menu.calendar} title={t.menu.calendar}>
             📅
           </Link>
         </div>
       </nav>
 
       {searchOpen ? (
-        <div className="fixed inset-0 z-60 flex items-start justify-center pt-24 bg-black/30">
-          <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
-            <div className="flex items-center gap-3">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 pt-20 sm:pt-24">
+          <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-xl sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3">
               <input
-                aria-label="Search transactions"
+                aria-label={t.menu.search}
                 className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                placeholder="Search by title, category, amount, or date"
+                placeholder={t.menu.searchPlaceholder}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(event) => setSearchQuery(event.target.value)}
                 autoFocus
               />
               <button
                 type="button"
-                onClick={() => { setSearchOpen(false); setSearchQuery(""); setSearchResults([]); }}
+                onClick={closeSearch}
                 className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
               >
-                Close
+                {t.menu.close}
               </button>
             </div>
 
-            <div className="mt-4">
-              <div className="mb-2 text-sm text-slate-500">{isSearching ? "Searching..." : `${searchResults.length} results`}</div>
-              <TransactionList transactions={searchResults} isLoading={isSearching} onDelete={() => {}} showDelete={false} />
+            <div className="mt-4 max-h-[60vh] overflow-y-auto">
+              <div className="mb-2 text-sm text-slate-500">
+                {isSearching ? t.menu.searching : `${searchResults.length} ${t.menu.results}`}
+              </div>
+              <TransactionList
+                transactions={searchResults}
+                isLoading={isSearching}
+                onDelete={() => {}}
+              />
             </div>
           </div>
         </div>
@@ -119,99 +142,145 @@ export function TopNav({ monthLabel, currentUser }) {
 
       {open ? (
         <div className="fixed inset-0 z-50 bg-black/40">
-          <aside className="flex h-full w-72 flex-col justify-between bg-white p-5 shadow-xl">
-            <div className="mb-6 flex items-center justify-between">
-              <p className="text-lg font-semibold text-slate-900">Menu</p>
+          <aside className="flex h-full w-72 flex-col bg-white p-4 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-base font-semibold text-slate-900">{t.menu.menu}</p>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-full border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700"
+                className="rounded-full border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700"
               >
-                Close
+                {t.menu.close}
               </button>
             </div>
 
-            <div className="flex flex-col gap-3">
-              {currentUser ? (
-                <>
+            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2">
+                {currentUser ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false);
+                        setSearchOpen(true);
+                      }}
+                      className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-xs font-semibold text-slate-800"
+                    >
+                      <span className="text-sm">🔍</span>
+                      {t.menu.search}
+                    </button>
+                    <Link
+                      href="/profile"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.common.profile}
+                    </Link>
+                    <Link
+                      href="/scan"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.menu.scan}
+                    </Link>
+                    <Link
+                      href="/gallery"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.menu.gallery}
+                    </Link>
+                    <Link
+                      href="/report"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.menu.report}
+                    </Link>
+                    <Link
+                      href="/streak"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.menu.streak}
+                    </Link>
+                    <Link
+                      href="/transactions"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.menu.transactions}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.common.login}
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.common.register}
+                    </Link>
+                  </>
+                )}
+              </div>
+
+              <section className="rounded-lg border border-slate-200 p-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  {t.menu.language}
+                </p>
+                <div className="grid grid-cols-3 gap-2 text-xs font-semibold">
                   <button
                     type="button"
-                    onClick={() => { setOpen(false); setSearchOpen(true); }}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800 flex items-center gap-2 text-left"
+                    onClick={() => setLanguage("en")}
+                    className={`rounded-lg border px-2 py-2 ${
+                      language === "en"
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : "border-slate-300 text-slate-700"
+                    }`}
                   >
-                    <span className="text-base">🔍</span>
-                    Search
+                    EN
                   </button>
-                  <Link
-                    href="/profile"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
+                  <button
+                    type="button"
+                    onClick={() => setLanguage("zh")}
+                    className={`rounded-lg border px-2 py-2 ${
+                      language === "zh"
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : "border-slate-300 text-slate-700"
+                    }`}
                   >
-                    Profile
-                  </Link>
-                  <Link
-                    href="/scan"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
+                    中文
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage("ms")}
+                    className={`rounded-lg border px-2 py-2 ${
+                      language === "ms"
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                        : "border-slate-300 text-slate-700"
+                    }`}
                   >
-                    Scan
-                  </Link>
-                  <Link
-                    href="/gallery"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
-                  >
-                    Gallery
-                  </Link>
-                  <Link
-                    href="/report"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
-                  >
-                    Report
-                  </Link>
-                  <Link
-                    href="/streak"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
-                  >
-                    Streak
-                  </Link>
-                  <Link
-                    href="/transactions"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
-                  >
-                    Transactions
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
-                  >
-                    Register
-                  </Link>
-                </>
-              )}
+                    BM
+                  </button>
+                </div>
+              </section>
             </div>
 
             {currentUser ? (
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-800"
+                className="mt-3 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-xs font-semibold text-slate-800"
               >
-                Logout
+                {t.common.logout}
               </button>
             ) : null}
           </aside>

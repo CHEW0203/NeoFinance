@@ -4,9 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRegisterForm } from "@/hooks/use-auth-form";
 import { BackButton } from "@/components/back-button";
+import { useLanguage } from "@/hooks/use-language";
 
 export default function RegisterPage() {
-  const { form, setForm, error, isSubmitting, submit } = useRegisterForm();
+  const { t } = useLanguage();
+  const { form, setForm, error, isSubmitting, submit } = useRegisterForm({
+    passwordMismatch: t.auth.passwordMismatch,
+    passwordTooShort: t.auth.passwordTooShort,
+    registerFailed: t.auth.registerFailed,
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -15,16 +21,16 @@ export default function RegisterPage() {
       <div className="mx-auto w-full max-w-3xl rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.45)] backdrop-blur">
         <BackButton fallbackHref="/login" />
         <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
-          Create NeoFinance Account
+          {t.auth.createTitle}
         </p>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
-          Register and start your private finance journey
+          {t.auth.createDesc}
         </h1>
 
         <form className="mt-8 grid gap-4 md:grid-cols-2" onSubmit={submit}>
           <input
             type="text"
-            placeholder="Username"
+            placeholder={t.auth.username}
             value={form.username}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, username: event.target.value }))
@@ -35,7 +41,7 @@ export default function RegisterPage() {
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="Password (min 8 characters)"
+              placeholder={t.auth.passwordHint}
               value={form.password}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, password: event.target.value }))
@@ -47,8 +53,8 @@ export default function RegisterPage() {
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-800"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              title={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+              title={showPassword ? t.auth.hidePassword : t.auth.showPassword}
             >
               {showPassword ? (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -77,7 +83,7 @@ export default function RegisterPage() {
           <div className="relative">
             <input
               type={showConfirmPassword ? "text" : "password"}
-              placeholder="Confirm password"
+              placeholder={t.auth.confirmPassword}
               value={form.confirmPassword}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
@@ -90,10 +96,10 @@ export default function RegisterPage() {
               onClick={() => setShowConfirmPassword((prev) => !prev)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-800"
               aria-label={
-                showConfirmPassword ? "Hide confirm password" : "Show confirm password"
+                showConfirmPassword ? t.auth.hideConfirmPassword : t.auth.showConfirmPassword
               }
               title={
-                showConfirmPassword ? "Hide confirm password" : "Show confirm password"
+                showConfirmPassword ? t.auth.hideConfirmPassword : t.auth.showConfirmPassword
               }
             >
               {showConfirmPassword ? (
@@ -126,7 +132,7 @@ export default function RegisterPage() {
             disabled={isSubmitting}
             className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
           >
-            {isSubmitting ? "Creating account..." : "Create account"}
+            {isSubmitting ? t.auth.creatingAccount : t.auth.createAccount}
           </button>
         </form>
 
@@ -137,9 +143,9 @@ export default function RegisterPage() {
         ) : null}
 
         <p className="mt-6 text-sm text-slate-600">
-          Already have an account?{" "}
+          {t.auth.hasAccount}{" "}
           <Link href="/login" className="font-semibold text-emerald-700">
-            Login here
+            {t.auth.loginHere}
           </Link>
         </p>
       </div>
