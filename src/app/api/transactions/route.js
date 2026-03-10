@@ -57,6 +57,7 @@ export async function GET(request) {
     const to = searchParams.get("to");
     const fromDate = from ? new Date(from) : null;
     const toDate = to ? new Date(to) : null;
+    const q = searchParams.get("q")?.trim();
 
     const where = {
       userId: user.id,
@@ -72,20 +73,155 @@ export async function GET(request) {
         : {}),
     };
 
-    const transactions = await prisma.transaction.findMany({
-      where,
+    // If no search query, return all transactions
+    if (!q) {
+      const transactions = await prisma.transaction.findMany({
+        where,
+        take: limit,
+        orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+        include: {
+          account: { select: { id: true, name: true, currency: true, type: true } },
+          category: { select: { id: true, name: true, type: true, color: true } },
+        },
+      });
+
+      return NextResponse.json({
+        data: transactions,
+        count: transactions.length,
+      });
+    }
+
+    // Search logic with relevance scoring
+    const include = {
+      account: { select: { id: true, name: true, currency: true, type: true } },
+      category: { select: { id: true, name: true, type: true, color: true } },
+    };
+
+    // Priority 1: Title contains query (exact or partial)
+    const titleMatches = await prisma.transaction.findMany({
+      where: { ...where, title: { contains: q } },
       take: limit,
       orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
-      include: {
-        account: { select: { id: true, name: true, currency: true, type: true } },
-        category: { select: { id: true, name: true, type: true, color: true, icon: true } },
-      },
+      include,
     });
 
-    return NextResponse.json({
-      data: transactions,
-      count: transactions.length,
+    // Priority 2: Category name contains query
+    const categoryMatches = await prisma.transaction.findMany({
+      where: { ...where, category: { name: { contains: q } } },
+      take: limit,
+      orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+      include,
     });
+
+    // Priority 3: Note contains query
+    const noteMatches = await prisma.transaction.findMany({
+      where: { ...where, note: { contains: q } },
+      take: limit,
+      orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+      include,
+    });
+
+    // Priority 4: Amount matches (after removing non-numeric characters)
+    const numeric = Number(String(q).replace(/[^0-9.-]/g, ""));
+    const amountMatches = Number.isFinite(numeric)
+      ? await prisma.transaction.findMany({
+          where: { ...where, amount: numeric },
+          take: limit,
+          orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+          include,
+        })
+      : [];
+
+    // Priority 5: Date matches
+    const parsedDate = new Date(q);
+    let dateMatches = [];
+    if (!Number.isNaN(parsedDate.getTime())) {
+      const start = new Date(parsedDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(parsedDate);
+      end.setHours(23, 59, 59, 999);
+      dateMatches = await prisma.transaction.findMany({
+        where: { ...where, transactionDate: { gte: start, lte: end } },
+        take: limit,
+        orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+        include,
+      });
+    }
+
+    // Merge results by ID, preserving priority order
+    const byId = new Map();
+    const pushResults = (arr, priority) => {
+      for (const item of arr || []) {
+        if (!byId.has(item.id)) {
+          byId.set(item.id, { ...item, _priority: priority });
+        }
+      }
+    };
+
+    pushResults(titleMatches, 1);
+    pushResults(categoryMatches, 2);
+    pushResults(noteMatches, 3);
+    pushResults(amountMatches, 4);
+    pushResults(dateMatches, 5);
+
+    // Sort by priority, then by date
+    const merged = Array.from(byId.values())
+      .sort((a, b) => {
+        if (a._priority !== b._priority) {
+          return a._priority - b._priority;
+        }
+        return new Date(b.transactionDate) - new Date(a.transactionDate);
+      })
+      .map(({ _priority, ...item }) => item)
+      .slice(0, limit);
+
+    if (merged.length > 0) {
+      return NextResponse.json({ data: merged, count: merged.length });
+    }
+
+    // Fallback: fuzzy search using raw SQL for typos
+    try {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      if (tokens.length > 0) {
+        function escapeLike(s) {
+          return String(s).replace(/([%_\\])/g, "\\$1");
+        }
+        const params = [user.id];
+        const tokenClauses = tokens.map((token) => {
+          const cleaned = escapeLike(token);
+          const pattern = `%${cleaned.split("").join("%")}%`;
+          params.push(pattern, pattern, pattern);
+          return `(t."title" LIKE ? ESCAPE '\\' OR t."note" LIKE ? ESCAPE '\\' OR c."name" LIKE ? ESCAPE '\\')`;
+        });
+
+        const whereSql = tokenClauses.join(" AND ");
+        const sql = `SELECT t.*, c.id as category_id, c.name as category_name, c.type as category_type, c.color as category_color, a.id as account_id, a.name as account_name, a.currency as account_currency, a.type as account_type FROM "Transaction" t LEFT JOIN "Account" a ON t."accountId" = a.id LEFT JOIN "Category" c ON t."categoryId" = c.id WHERE t."userId" = ? AND (${whereSql}) ORDER BY t."transactionDate" DESC, t."createdAt" DESC LIMIT ${limit}`;
+
+        const rows = await prisma.$queryRawUnsafe(sql, ...params);
+        const mapped = (rows || []).map((r) => ({
+          id: r.id,
+          title: r.title,
+          note: r.note,
+          amount: r.amount,
+          type: r.type,
+          transactionDate: r.transactionDate,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+          userId: r.userId,
+          accountId: r.accountId,
+          categoryId: r.categoryId,
+          account: r.account_id ? { id: r.account_id, name: r.account_name, currency: r.account_currency, type: r.account_type } : null,
+          category: r.category_id ? { id: r.category_id, name: r.category_name, type: r.category_type, color: r.category_color } : null,
+        }));
+        if (mapped.length > 0) {
+          return NextResponse.json({ data: mapped, count: mapped.length });
+        }
+      }
+    } catch (err) {
+      console.error("Fuzzy search fallback failed:", String(err));
+    }
+
+    return NextResponse.json({ data: [], count: 0 });
   } catch (error) {
     return NextResponse.json(
       { message: "Failed to load transactions.", error: String(error) },

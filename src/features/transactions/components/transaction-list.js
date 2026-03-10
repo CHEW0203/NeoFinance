@@ -34,13 +34,6 @@ export function TransactionList({
             <p className="text-sm font-semibold text-slate-700">
               {formatTransactionAmount(transaction.type, transaction.amount)}
             </p>
-            <button
-              type="button"
-              onClick={() => onDelete(transaction.id)}
-              className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-500 hover:text-slate-900"
-            >
-              Delete
-            </button>
           </div>
         </article>
       ))}

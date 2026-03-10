@@ -36,7 +36,6 @@ export async function getDashboardSnapshot() {
           category: {
             select: {
               name: true,
-              icon: true,
             },
           },
         },
