@@ -77,6 +77,7 @@ export function TransactionScreen({ recordId }) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryIcon, setNewCategoryIcon] = useState(EXPENSE_ICON_CHOICES[0]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeleteCategoryConfirm, setShowDeleteCategoryConfirm] = useState(false);
 
   const isEditing = Boolean(recordId);
   const todayDate = new Date().toISOString().slice(0, 10);
@@ -93,42 +94,19 @@ export function TransactionScreen({ recordId }) {
       : "bg-[radial-gradient(circle_at_top,#fff7d6_0%,#ffe790_52%,#ffd158_100%)]";
 
   async function loadCategoriesAndDefaults() {
-    const response = await fetch("/api/transactions?limit=500", {
+    const response = await fetch("/api/categories", {
       cache: "no-store",
     });
     const payload = await response.json();
     if (!response.ok) {
-      throw new Error(payload.message || "Failed to load transactions.");
+      throw new Error(payload.message || "Failed to load categories.");
     }
 
-    const map = new Map();
-    payload.data.forEach((transaction) => {
-      const category = transaction.category;
-      if (category && !map.has(category.id)) {
-        map.set(category.id, {
-          id: category.id,
-          name: category.name,
-          type: category.type,
-          icon: CATEGORY_ICON_MAP[String(category.name || "").toLowerCase()] || null,
-        });
-      }
-    });
-
-    const defaults = [
-      { id: "default-food", name: "Food", type: "expense", icon: "🍜" },
-      { id: "default-transport", name: "Transport", type: "expense", icon: "🚌" },
-      { id: "default-gift", name: "Gift", type: "expense", icon: "🎁" },
-      { id: "default-others", name: "Others", type: "expense", icon: "📦" },
-      { id: "default-salary", name: "Salary", type: "income", icon: "💼" },
-    ];
-
-    defaults.forEach((item) => {
-      if (![...map.values()].some((row) => row.name.toLowerCase() === item.name.toLowerCase())) {
-        map.set(item.id, item);
-      }
-    });
-
-    setCategories([...map.values()]);
+    const rows = (payload.data || []).map((item) => ({
+      ...item,
+      icon: item.icon || CATEGORY_ICON_MAP[String(item.name || "").toLowerCase()] || "🧾",
+    }));
+    setCategories(rows);
   }
 
   async function loadRecord(id) {
@@ -218,7 +196,7 @@ export function TransactionScreen({ recordId }) {
       transactionDate,
       note: null,
       ...(category.isCustom || category.id.startsWith("default-")
-        ? { categoryName: category.name }
+        ? { categoryName: category.name, categoryIcon: category.icon || null }
         : { categoryId: category.id }),
     };
 
@@ -268,6 +246,28 @@ export function TransactionScreen({ recordId }) {
       setError(parseApiError(requestError, "Failed to delete record."));
     } finally {
       setIsDeleting(false);
+    }
+  }
+
+  async function handleDeleteCategoryConfirmed() {
+    if (!selectedCategoryId) return;
+    const category = categories.find((item) => item.id === selectedCategoryId);
+    if (!category) return;
+
+    try {
+      const response = await fetch(`/api/categories/${category.id}`, {
+        method: "DELETE",
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || "Failed to delete category.");
+      }
+      setShowDeleteCategoryConfirm(false);
+      setSelectedCategoryId("");
+      await loadCategoriesAndDefaults();
+    } catch (requestError) {
+      setError(parseApiError(requestError, "Failed to delete category."));
+      setShowDeleteCategoryConfirm(false);
     }
   }
 
@@ -355,6 +355,17 @@ export function TransactionScreen({ recordId }) {
               </button>
             ))}
           </div>
+          {selectedCategoryId ? (
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDeleteCategoryConfirm(true)}
+                className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
+              >
+                Delete selected category
+              </button>
+            </div>
+          ) : null}
         </section>
 
         <form
@@ -491,6 +502,33 @@ export function TransactionScreen({ recordId }) {
                 onClick={handleDeleteConfirmed}
                 disabled={isDeleting}
                 className="flex-1 rounded-2xl bg-rose-500 px-4 py-2 font-semibold text-white disabled:opacity-60"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showDeleteCategoryConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-sm rounded-3xl border-2 border-slate-900 bg-white p-5">
+            <h3 className="text-xl font-semibold text-slate-900">Delete this category?</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Existing records under this category will be moved safely.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteCategoryConfirm(false)}
+                className="flex-1 rounded-2xl border border-slate-300 px-4 py-2 font-semibold text-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteCategoryConfirmed}
+                className="flex-1 rounded-2xl bg-rose-500 px-4 py-2 font-semibold text-white"
               >
                 OK
               </button>

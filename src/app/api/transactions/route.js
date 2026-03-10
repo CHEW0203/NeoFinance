@@ -78,7 +78,7 @@ export async function GET(request) {
       orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
       include: {
         account: { select: { id: true, name: true, currency: true, type: true } },
-        category: { select: { id: true, name: true, type: true, color: true } },
+        category: { select: { id: true, name: true, type: true, color: true, icon: true } },
       },
     });
 
@@ -110,6 +110,9 @@ export async function POST(request) {
     const note = body.note ? String(body.note).trim() : null;
     const categoryName = body.categoryName
       ? String(body.categoryName).trim()
+      : null;
+    const categoryIcon = body.categoryIcon
+      ? String(body.categoryIcon).trim()
       : null;
     const amount = toPositiveNumber(body.amount);
     const transactionDate = body.transactionDate
@@ -177,6 +180,7 @@ export async function POST(request) {
           data: {
             name: categoryName,
             type,
+            icon: categoryIcon || null,
             userId: user.id,
           },
           select: { id: true },
@@ -200,7 +204,7 @@ export async function POST(request) {
         },
         include: {
           account: { select: { id: true, name: true, currency: true, type: true } },
-          category: { select: { id: true, name: true, type: true, color: true } },
+          category: { select: { id: true, name: true, type: true, color: true, icon: true } },
         },
       });
 

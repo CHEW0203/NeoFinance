@@ -4,7 +4,9 @@ import { TopNav } from "@/features/dashboard/components/top-nav";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
 import { formatCurrency } from "@/utils/format";
 
-function categoryIcon(name) {
+function categoryIcon(category) {
+  if (category?.icon) return category.icon;
+  const name = category?.name;
   const value = String(name || "").toLowerCase();
   if (value.includes("food")) return "🍜";
   if (value.includes("transport")) return "🚌";
@@ -109,7 +111,7 @@ export default async function Home() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xl">
-                          {categoryIcon(item.category?.name)}
+                          {categoryIcon(item.category)}
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900">

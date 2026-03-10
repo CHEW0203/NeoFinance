@@ -24,7 +24,7 @@ async function loadContext(userId, transactionId) {
       where: { id: transactionId, userId },
       include: {
         account: { select: { id: true, name: true, currency: true, type: true } },
-        category: { select: { id: true, name: true, type: true, color: true } },
+        category: { select: { id: true, name: true, type: true, color: true, icon: true } },
       },
     }),
     prisma.user.findUnique({
@@ -58,7 +58,7 @@ export async function GET(_request, context) {
       },
       include: {
         account: { select: { id: true, name: true, currency: true, type: true } },
-        category: { select: { id: true, name: true, type: true, color: true } },
+        category: { select: { id: true, name: true, type: true, color: true, icon: true } },
       },
     });
 
@@ -104,6 +104,9 @@ export async function PATCH(request, context) {
       : existing.transactionDate;
     const categoryName = body.categoryName
       ? String(body.categoryName).trim()
+      : null;
+    const categoryIcon = body.categoryIcon
+      ? String(body.categoryIcon).trim()
       : null;
 
     if (!title) {
@@ -162,6 +165,7 @@ export async function PATCH(request, context) {
           data: {
             name: categoryName,
             type,
+            icon: categoryIcon || null,
             userId: currentUser.id,
           },
           select: { id: true },
@@ -210,7 +214,7 @@ export async function PATCH(request, context) {
         },
         include: {
           account: { select: { id: true, name: true, currency: true, type: true } },
-          category: { select: { id: true, name: true, type: true, color: true } },
+          category: { select: { id: true, name: true, type: true, color: true, icon: true } },
         },
       });
     });

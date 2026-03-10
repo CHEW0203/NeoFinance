@@ -31,11 +31,11 @@ async function main() {
       },
       categories: {
         create: [
-          { name: "Salary", type: "income", color: "#0f766e" },
-          { name: "Food", type: "expense", color: "#b45309" },
-          { name: "Transport", type: "expense", color: "#334155" },
-          { name: "Gift", type: "expense", color: "#be185d" },
-          { name: "Others", type: "expense", color: "#475569" },
+          { name: "Salary", type: "income", color: "#0f766e", icon: "💼" },
+          { name: "Food", type: "expense", color: "#b45309", icon: "🍜" },
+          { name: "Transport", type: "expense", color: "#334155", icon: "🚌" },
+          { name: "Gift", type: "expense", color: "#be185d", icon: "🎁" },
+          { name: "Others", type: "expense", color: "#475569", icon: "📦" },
         ],
       },
     },
