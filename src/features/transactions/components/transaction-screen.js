@@ -14,36 +14,11 @@ const CATEGORY_ICON_MAP = {
 };
 
 const EXPENSE_ICON_CHOICES = [
-  "🍜",
-  "☕",
-  "🍔",
-  "🍕",
-  "🛍️",
-  "🎁",
-  "🚌",
-  "🎮",
-  "🎵",
-  "🏠",
-  "📱",
-  "🧾",
+  "🍜", "☕", "🍔", "🍕", "🛍️", "🎁", "🚌", "🎮", "🎵", "🏠", "📱", "🧾",
 ];
 
 const INCOME_ICON_CHOICES = [
-  "💼",
-  "💰",
-  "💸",
-  "🏦",
-  "📈",
-  "🪙",
-  "💳",
-  "🧠",
-  "🎯",
-  "🧾",
-  "🛠️",
-  "🏆",
-  "🎓",
-  "👔",
-  "📊",
+  "💼", "💰", "💸", "🏦", "📈", "🪙", "💳", "🧠", "🎯", "🧾", "🛠️", "🏆", "🎓", "👔", "📊",
 ];
 
 function iconForCategory(name, customIcon) {
@@ -67,7 +42,10 @@ export function TransactionScreen({ recordId }) {
   const [transactionDate, setTransactionDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
+  
+  // 🚀 AI Fix: 默认设为空，让 AI 有机会介入
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  
   const [categories, setCategories] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -140,14 +118,12 @@ export function TransactionScreen({ recordId }) {
   }, [recordId]);
 
   useEffect(() => {
-    if (!selectedCategoryId && filteredCategories.length > 0) {
-      setSelectedCategoryId(filteredCategories[0].id);
-    } else if (
+    if (
       selectedCategoryId &&
       filteredCategories.length > 0 &&
       !filteredCategories.some((item) => item.id === selectedCategoryId)
     ) {
-      setSelectedCategoryId(filteredCategories[0].id);
+      setSelectedCategoryId("");
     }
   }, [filteredCategories, selectedCategoryId]);
 
@@ -177,27 +153,36 @@ export function TransactionScreen({ recordId }) {
     setError("");
     setSuccess("");
 
-    if (!selectedCategoryId) {
-      setError(t.transactions.selectCategory);
-      return;
-    }
-
-    const category = categories.find((item) => item.id === selectedCategoryId);
-    if (!category) {
-      setError(t.transactions.categoryNotFound);
+    // 🚀 AI Fix: 如果没选 Category，必须要有 Title 给 AI 猜
+    if (!selectedCategoryId && !title.trim()) {
+      setError("Please enter a Record title for AI auto-detect, or select a category manually.");
       return;
     }
 
     const payload = {
-      title: title || category.name,
+      title: title.trim(),
       amount: Number(amount),
       type: mode,
       transactionDate,
       note: null,
-      ...(category.isCustom || category.id.startsWith("default-")
-        ? { categoryName: category.name, categoryIcon: category.icon || null }
-        : { categoryId: category.id }),
     };
+
+    if (selectedCategoryId) {
+      const category = categories.find((item) => item.id === selectedCategoryId);
+      if (!category) {
+        setError(t.transactions.categoryNotFound);
+        return;
+      }
+      
+      payload.title = payload.title || category.name;
+      
+      if (category.isCustom || category.id.startsWith("default-")) {
+        payload.categoryName = category.name;
+        payload.categoryIcon = category.icon || null;
+      } else {
+        payload.categoryId = category.id;
+      }
+    }
 
     setIsSaving(true);
     try {
@@ -216,6 +201,7 @@ export function TransactionScreen({ recordId }) {
       setSuccess(isEditing ? t.transactions.recordUpdated : t.transactions.recordAdded);
       if (!isEditing) {
         setAmount("");
+        setTitle("");
       }
       router.push("/");
       router.refresh();
@@ -391,6 +377,7 @@ export function TransactionScreen({ recordId }) {
               required
             />
           </div>
+          
           <input
             type="text"
             value={title}
@@ -424,6 +411,7 @@ export function TransactionScreen({ recordId }) {
         ) : null}
       </div>
 
+      {/* ... [后面的 Modals 代码保持不变] ... */}
       {showCategoryCreator ? (
         <div className="fixed inset-0 z-40 bg-white">
           <div className={`min-h-screen ${pageBackgroundClass} px-4 py-6 text-slate-900 sm:px-6`}>

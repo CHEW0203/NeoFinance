@@ -37,14 +37,89 @@ async function getAuthenticatedUserWithBaseData() {
   });
 }
 
+// Allowed icons for AI to choose from when creating a new category
+const EXPENSE_ICONS = ["🍜", "☕", "🍔", "🍕", "🛍️", "🎁", "🚌", "🎮", "🎵", "🏠", "📱", "🧾"];
+const INCOME_ICONS = ["💼", "💰", "💸", "🏦", "📈", "🪙", "💳", "🧠", "🎯", "🧾", "🛠️", "🏆", "🎓", "👔", "📊"];
+
+// ==========================================
+// AI Helper: Gemini 2.5 Flash Auto-Categorization
+// ==========================================
+async function detectCategoryWithAI(title, userCategories, transactionType) {
+  const apiKey = process.env.GEMINI_API_KEY; 
+  if (!apiKey) {
+    console.error("[AI System] Missing GEMINI_API_KEY in environment variables.");
+    return null; 
+  }
+
+  // Filter existing categories based on transaction type
+  const availableCategories = userCategories
+    .filter(c => c.type === transactionType)
+    .map(c => ({ id: c.id, name: c.name }));
+
+  const allowedIcons = transactionType === "expense" ? EXPENSE_ICONS : INCOME_ICONS;
+
+  const prompt = `
+    You are a smart financial categorizer.
+    Transaction Title: "${title}"
+    Type: ${transactionType}
+    Existing Categories: ${JSON.stringify(availableCategories)}
+    Allowed Icons for new category: ${JSON.stringify(allowedIcons)}
+
+    Instruction:
+    1. If the title fits perfectly into one of the "Existing Categories", return its ID.
+    2. If it does NOT fit well, invent a short new category name and pick the most suitable icon from "Allowed Icons".
+    3. MUST output ONLY a valid JSON object. No other text or markdown formatting.
+
+    Output format MUST be exactly one of these:
+    {"type": "existing", "id": "category_id_here"}
+    OR
+    {"type": "new", "name": "Category Name", "icon": "icon_here"}
+  `;
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1 } 
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+       console.error("[AI System] Google API Error:", data.error.message);
+       return null;
+    }
+
+    let aiTextResult = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+    if (!aiTextResult) return null;
+
+    // Sanitize potential markdown wrappers from AI response
+    if (aiTextResult.startsWith("```json")) {
+      aiTextResult = aiTextResult.replace(/```json/g, "").replace(/```/g, "").trim();
+    } else if (aiTextResult.startsWith("```")) {
+      aiTextResult = aiTextResult.replace(/```/g, "").trim();
+    }
+
+    const aiDecision = JSON.parse(aiTextResult);
+    return aiDecision;
+
+  } catch (error) {
+    console.error("[AI System] Failed to parse AI response or network error:", error);
+    return null;
+  }
+}
+// ==========================================
+
 export async function GET(request) {
   try {
     const user = await getAuthenticatedUserWithBaseData();
     if (!user) {
       return NextResponse.json(
-        {
-          message: "Unauthorized. Please login.",
-        },
+        { message: "Unauthorized. Please login." },
         { status: 401 }
       );
     }
@@ -73,7 +148,6 @@ export async function GET(request) {
         : {}),
     };
 
-    // If no search query, return all transactions
     if (!q) {
       const transactions = await prisma.transaction.findMany({
         where,
@@ -91,13 +165,11 @@ export async function GET(request) {
       });
     }
 
-    // Search logic with relevance scoring
     const include = {
       account: { select: { id: true, name: true, currency: true, type: true } },
       category: { select: { id: true, name: true, type: true, color: true, icon: true } },
     };
 
-    // Priority 1: Title contains query (exact or partial)
     const titleMatches = await prisma.transaction.findMany({
       where: { ...where, title: { contains: q } },
       take: limit,
@@ -105,7 +177,6 @@ export async function GET(request) {
       include,
     });
 
-    // Priority 2: Category name contains query
     const categoryMatches = await prisma.transaction.findMany({
       where: { ...where, category: { name: { contains: q } } },
       take: limit,
@@ -113,7 +184,6 @@ export async function GET(request) {
       include,
     });
 
-    // Priority 3: Note contains query
     const noteMatches = await prisma.transaction.findMany({
       where: { ...where, note: { contains: q } },
       take: limit,
@@ -121,7 +191,6 @@ export async function GET(request) {
       include,
     });
 
-    // Priority 4: Amount matches (after removing non-numeric characters)
     const numeric = Number(String(q).replace(/[^0-9.-]/g, ""));
     const amountMatches = Number.isFinite(numeric)
       ? await prisma.transaction.findMany({
@@ -132,7 +201,6 @@ export async function GET(request) {
         })
       : [];
 
-    // Priority 5: Date matches
     const parsedDate = new Date(q);
     let dateMatches = [];
     if (!Number.isNaN(parsedDate.getTime())) {
@@ -148,7 +216,6 @@ export async function GET(request) {
       });
     }
 
-    // Merge results by ID, preserving priority order
     const byId = new Map();
     const pushResults = (arr, priority) => {
       for (const item of arr || []) {
@@ -164,7 +231,6 @@ export async function GET(request) {
     pushResults(amountMatches, 4);
     pushResults(dateMatches, 5);
 
-    // Sort by priority, then by date
     const merged = Array.from(byId.values())
       .sort((a, b) => {
         if (a._priority !== b._priority) {
@@ -179,7 +245,6 @@ export async function GET(request) {
       return NextResponse.json({ data: merged, count: merged.length });
     }
 
-    // Fallback: fuzzy search using raw SQL for typos
     try {
       const tokens = q.split(/\s+/).filter(Boolean);
       if (tokens.length > 0) {
@@ -251,65 +316,68 @@ export async function POST(request) {
     const body = await request.json();
     const title = String(body.title || "").trim();
     const type = String(body.type || "").trim().toLowerCase();
+    
     const note = body.note ? String(body.note).trim() : null;
-    const categoryName = body.categoryName
-      ? String(body.categoryName).trim()
-      : null;
-    const categoryIcon = body.categoryIcon
-      ? String(body.categoryIcon).trim()
-      : null;
+    let categoryName = body.categoryName ? String(body.categoryName).trim() : null;
+    let categoryIcon = body.categoryIcon ? String(body.categoryIcon).trim() : null;
+    let bodyCategoryId = body.categoryId; 
+    
     const amount = toPositiveNumber(body.amount);
-    const transactionDate = body.transactionDate
-      ? new Date(body.transactionDate)
-      : new Date();
+    const transactionDate = body.transactionDate ? new Date(body.transactionDate) : new Date();
 
     if (!title) {
       return NextResponse.json({ message: "`title` is required." }, { status: 400 });
     }
     if (!VALID_TYPES.has(type)) {
-      return NextResponse.json(
-        { message: "`type` must be either `income` or `expense`." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "`type` must be either `income` or `expense`." }, { status: 400 });
     }
     if (!amount) {
-      return NextResponse.json(
-        { message: "`amount` must be a positive number." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "`amount` must be a positive number." }, { status: 400 });
     }
     if (Number.isNaN(transactionDate.getTime())) {
-      return NextResponse.json(
-        { message: "`transactionDate` must be a valid date." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "`transactionDate` must be a valid date." }, { status: 400 });
     }
     if (isFutureDate(transactionDate)) {
-      return NextResponse.json(
-        { message: "`transactionDate` cannot be in the future." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "`transactionDate` cannot be in the future." }, { status: 400 });
     }
 
-    const account =
-      user.accounts.find((item) => item.id === body.accountId) || user.accounts[0];
+    const account = user.accounts.find((item) => item.id === body.accountId) || user.accounts[0];
     if (!account) {
-      return NextResponse.json(
-        { message: "No account found for that user." },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "No account found for that user." }, { status: 400 });
     }
 
-    const defaultCategory =
-      user.categories.find((item) => item.type === type) || user.categories[0];
-    const categoryById = user.categories.find((item) => item.id === body.categoryId);
+    // ==========================================
+    // AI Auto-Categorization Intercept
+    // Triggered only if the user did not manually select a category
+    // ==========================================
+    if (!bodyCategoryId && !categoryName) {
+      console.log(`[AI System] Processing categorization for title: "${title}"`);
+      const aiResult = await detectCategoryWithAI(title, user.categories, type);
+      
+      if (aiResult) {
+        if (aiResult.type === "existing" && aiResult.id) {
+          bodyCategoryId = aiResult.id;
+          console.log(`[AI System] Successfully matched existing Category ID: ${bodyCategoryId}`);
+        } else if (aiResult.type === "new" && aiResult.name && aiResult.icon) {
+          categoryName = aiResult.name;
+          categoryIcon = aiResult.icon;
+          console.log(`[AI System] Successfully generated new Category: ${categoryName} ${categoryIcon}`);
+        }
+      }
+    }
+    // ==========================================
+
+    // Fallback logic if AI fails or user provided inputs
+    const defaultCategory = user.categories.find((item) => item.type === type) || user.categories[0];
+    const categoryById = user.categories.find((item) => item.id === bodyCategoryId); 
     const categoryByName = categoryName
       ? user.categories.find(
-          (item) =>
-            item.type === type && item.name.toLowerCase() === categoryName.toLowerCase()
+          (item) => item.type === type && item.name.toLowerCase() === categoryName.toLowerCase()
         )
       : null;
+
     const selectedCategory = categoryById || categoryByName || defaultCategory;
+    
     if (!selectedCategory && !categoryName) {
       return NextResponse.json(
         { message: "No category found for this user." },
@@ -319,6 +387,8 @@ export async function POST(request) {
 
     const transaction = await prisma.$transaction(async (tx) => {
       let categoryId = categoryById?.id || categoryByName?.id || null;
+      
+      // Create new category if generated by AI or custom input
       if (!categoryId && categoryName) {
         const createdCategory = await tx.category.create({
           data: {
@@ -331,6 +401,7 @@ export async function POST(request) {
         });
         categoryId = createdCategory.id;
       }
+      
       if (!categoryId) {
         categoryId = selectedCategory.id;
       }
