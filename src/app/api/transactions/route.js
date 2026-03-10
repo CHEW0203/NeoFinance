@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireCurrentUser } from "@/lib/auth/session";
 
-const DEMO_EMAIL = "demo@finance.local";
 const VALID_TYPES = new Set(["income", "expense"]);
 
 function toPositiveNumber(value) {
@@ -12,9 +12,14 @@ function toPositiveNumber(value) {
   return number;
 }
 
-async function getDemoUser() {
+async function getAuthenticatedUserWithBaseData() {
+  const currentUser = await requireCurrentUser();
+  if (!currentUser) {
+    return null;
+  }
+
   return prisma.user.findUnique({
-    where: { email: DEMO_EMAIL },
+    where: { id: currentUser.id },
     include: {
       accounts: {
         orderBy: { createdAt: "asc" },
@@ -28,25 +33,37 @@ async function getDemoUser() {
 
 export async function GET(request) {
   try {
-    const user = await getDemoUser();
+    const user = await getAuthenticatedUserWithBaseData();
     if (!user) {
       return NextResponse.json(
         {
-          message: "Demo user not found. Run `npm run db:seed` first.",
+          message: "Unauthorized. Please login.",
         },
-        { status: 404 }
+        { status: 401 }
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(Math.max(Number(searchParams.get("limit") || 50), 1), 100);
+    const limit = Math.min(Math.max(Number(searchParams.get("limit") || 50), 1), 500);
     const type = searchParams.get("type");
     const categoryId = searchParams.get("categoryId");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
 
     const where = {
       userId: user.id,
       ...(type && VALID_TYPES.has(type) ? { type } : {}),
       ...(categoryId ? { categoryId } : {}),
+      ...(fromDate || toDate
+        ? {
+            transactionDate: {
+              ...(fromDate && !Number.isNaN(fromDate.getTime()) ? { gte: fromDate } : {}),
+              ...(toDate && !Number.isNaN(toDate.getTime()) ? { lte: toDate } : {}),
+            },
+          }
+        : {}),
     };
 
     const transactions = await prisma.transaction.findMany({
@@ -73,11 +90,11 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const user = await getDemoUser();
+    const user = await getAuthenticatedUserWithBaseData();
     if (!user) {
       return NextResponse.json(
-        { message: "Demo user not found. Run `npm run db:seed` first." },
-        { status: 404 }
+        { message: "Unauthorized. Please login." },
+        { status: 401 }
       );
     }
 

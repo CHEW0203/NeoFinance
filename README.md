@@ -1,8 +1,8 @@
 # NeoFinance
 
-NeoFinance is a finance tracking and analysis website designed to help users build strong money habits through consistent daily usage, clear insights, and practical decision support.
+NeoFinance is an AI-powered finance tracking and analysis platform built to help users form strong money habits through consistent daily tracking, clear insight visibility, and actionable guidance.
 
-Unlike many basic expense trackers, NeoFinance is being built as a more intelligent and structured personal finance system with stronger analysis and guidance capabilities.
+Beyond basic expense logging, NeoFinance focuses on intelligent personal finance support with AI-assisted categorization, receipt understanding, behavior-level spending analysis, and recommendation-driven financial feedback.
 
 ## Project Status
 
@@ -39,6 +39,8 @@ Recommended versions:
 - Prisma
 - Tailwind CSS IntelliSense
 - Prettier - Code formatter
+- ES7+ React/Redux/React-Native snippets
+- Auto Rename Tag
 
 ## Quick Start
 
@@ -93,6 +95,32 @@ npm run dev
 9. Open:
 
 - App: [http://localhost:3000](http://localhost:3000)
+
+## React Frontend Setup
+
+No extra React installation is required because Next.js already includes React and React DOM.
+
+Use this command to verify:
+
+```bash
+npm ls react react-dom
+```
+
+React development workflow:
+
+1. Put reusable UI in `src/features/*/components`.
+2. Put request logic in `src/services`.
+3. Put page logic and state handling in `src/hooks`.
+4. Keep pages in `src/app/*/page.js` focused on composition.
+
+Current React architecture files added:
+
+- `src/hooks/use-transactions.js`
+- `src/services/api-client.js`
+- `src/services/transaction-api.js`
+- `src/features/transactions/components/transaction-form.js`
+- `src/features/transactions/components/transaction-list.js`
+- `src/utils/format.js`
 
 ## Prisma Studio (Database UI)
 

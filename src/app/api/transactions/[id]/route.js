@@ -1,23 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const DEMO_EMAIL = "demo@finance.local";
-
-async function getDemoUserId() {
-  const user = await prisma.user.findUnique({
-    where: { email: DEMO_EMAIL },
-    select: { id: true },
-  });
-  return user?.id || null;
-}
+import { requireCurrentUser } from "@/lib/auth/session";
 
 export async function DELETE(_request, context) {
   try {
-    const userId = await getDemoUserId();
-    if (!userId) {
+    const currentUser = await requireCurrentUser();
+    if (!currentUser) {
       return NextResponse.json(
-        { message: "Demo user not found. Run `npm run db:seed` first." },
-        { status: 404 }
+        { message: "Unauthorized. Please login." },
+        { status: 401 }
       );
     }
 
@@ -30,7 +21,7 @@ export async function DELETE(_request, context) {
     const existing = await prisma.transaction.findFirst({
       where: {
         id,
-        userId,
+        userId: currentUser.id,
       },
       select: {
         id: true,

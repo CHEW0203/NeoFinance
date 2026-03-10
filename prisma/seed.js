@@ -1,19 +1,26 @@
 const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
 async function main() {
   const existingUser = await prisma.user.findUnique({
-    where: { email: "demo@finance.local" },
+    where: { username: "demo_user" },
   });
 
   if (existingUser) {
     return;
   }
 
+  const passwordHash = await bcrypt.hash("demo12345", 12);
+
   const user = await prisma.user.create({
     data: {
       name: "Demo User",
+      username: "demo_user",
+      passwordHash,
+      occupation: "working",
+      salaryRange: "RM 4,000 - RM 5,999",
       email: "demo@finance.local",
       accounts: {
         create: {
@@ -26,7 +33,9 @@ async function main() {
         create: [
           { name: "Salary", type: "income", color: "#0f766e" },
           { name: "Food", type: "expense", color: "#b45309" },
-          { name: "Utilities", type: "expense", color: "#1d4ed8" },
+          { name: "Transport", type: "expense", color: "#334155" },
+          { name: "Gift", type: "expense", color: "#be185d" },
+          { name: "Others", type: "expense", color: "#475569" },
         ],
       },
     },
@@ -39,8 +48,8 @@ async function main() {
   const account = user.accounts[0];
   const salaryCategory = user.categories.find((category) => category.name === "Salary");
   const foodCategory = user.categories.find((category) => category.name === "Food");
-  const utilitiesCategory = user.categories.find(
-    (category) => category.name === "Utilities"
+  const transportCategory = user.categories.find(
+    (category) => category.name === "Transport"
   );
 
   await prisma.transaction.createMany({
@@ -64,13 +73,13 @@ async function main() {
         categoryId: foodCategory.id,
       },
       {
-        title: "Internet bill",
+        title: "Bus fare",
         amount: 129,
         type: "expense",
         transactionDate: new Date("2026-03-05"),
         userId: user.id,
         accountId: account.id,
-        categoryId: utilitiesCategory.id,
+        categoryId: transportCategory.id,
       },
     ],
   });
