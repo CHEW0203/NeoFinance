@@ -57,7 +57,7 @@ export default function ProfilePage() {
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe_0%,#f8fafc_38%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
         <div className="mx-auto w-full max-w-4xl">
           <BackButton fallbackHref="/" />
-          <p className="mt-6 text-sm text-slate-600">Loading profile...</p>
+          <p className="mt-6 text-sm text-slate-600">Loading profile....</p>
         </div>
       </main>
     );
