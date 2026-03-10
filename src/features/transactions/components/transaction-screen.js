@@ -79,6 +79,7 @@ export function TransactionScreen({ recordId }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isEditing = Boolean(recordId);
+  const todayDate = new Date().toISOString().slice(0, 10);
 
   const filteredCategories = useMemo(
     () => categories.filter((item) => item.type === mode),
@@ -365,6 +366,7 @@ export function TransactionScreen({ recordId }) {
               type="date"
               value={transactionDate}
               onChange={(event) => setTransactionDate(event.target.value)}
+              max={todayDate}
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium outline-none focus:border-slate-800"
               required
             />

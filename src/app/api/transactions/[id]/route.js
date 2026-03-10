@@ -12,6 +12,12 @@ function toPositiveNumber(value) {
   return number;
 }
 
+function isFutureDate(dateValue) {
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return dateValue > endOfToday;
+}
+
 async function loadContext(userId, transactionId) {
   const [transaction, user] = await Promise.all([
     prisma.transaction.findFirst({
@@ -121,6 +127,12 @@ export async function PATCH(request, context) {
         { status: 400 }
       );
     }
+    if (isFutureDate(transactionDate)) {
+      return NextResponse.json(
+        { message: "`transactionDate` cannot be in the future." },
+        { status: 400 }
+      );
+    }
 
     const account =
       user.accounts.find((item) => item.id === body.accountId) ||
@@ -131,14 +143,20 @@ export async function PATCH(request, context) {
     }
 
     const defaultCategory = user.categories.find((item) => item.type === type);
-    const selectedCategory =
+    const categoryById =
       user.categories.find((item) => item.id === body.categoryId) ||
       user.categories.find((item) => item.id === existing.categoryId) ||
-      defaultCategory ||
       null;
+    const categoryByName = categoryName
+      ? user.categories.find(
+          (item) =>
+            item.type === type && item.name.toLowerCase() === categoryName.toLowerCase()
+        )
+      : null;
+    const selectedCategory = categoryById || categoryByName || defaultCategory || null;
 
     const updated = await prisma.$transaction(async (tx) => {
-      let categoryId = selectedCategory?.id;
+      let categoryId = categoryById?.id || categoryByName?.id || null;
       if (!categoryId && categoryName) {
         const createdCategory = await tx.category.create({
           data: {
@@ -149,6 +167,9 @@ export async function PATCH(request, context) {
           select: { id: true },
         });
         categoryId = createdCategory.id;
+      }
+      if (!categoryId && selectedCategory) {
+        categoryId = selectedCategory.id;
       }
 
       const oldDelta = existing.type === "income" ? existing.amount : -existing.amount;

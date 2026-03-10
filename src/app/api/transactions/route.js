@@ -12,6 +12,12 @@ function toPositiveNumber(value) {
   return number;
 }
 
+function isFutureDate(dateValue) {
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return dateValue > endOfToday;
+}
+
 async function getAuthenticatedUserWithBaseData() {
   const currentUser = await requireCurrentUser();
   if (!currentUser) {
@@ -131,6 +137,12 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+    if (isFutureDate(transactionDate)) {
+      return NextResponse.json(
+        { message: "`transactionDate` cannot be in the future." },
+        { status: 400 }
+      );
+    }
 
     const account =
       user.accounts.find((item) => item.id === body.accountId) || user.accounts[0];
@@ -143,8 +155,14 @@ export async function POST(request) {
 
     const defaultCategory =
       user.categories.find((item) => item.type === type) || user.categories[0];
-    const selectedCategory =
-      user.categories.find((item) => item.id === body.categoryId) || defaultCategory;
+    const categoryById = user.categories.find((item) => item.id === body.categoryId);
+    const categoryByName = categoryName
+      ? user.categories.find(
+          (item) =>
+            item.type === type && item.name.toLowerCase() === categoryName.toLowerCase()
+        )
+      : null;
+    const selectedCategory = categoryById || categoryByName || defaultCategory;
     if (!selectedCategory && !categoryName) {
       return NextResponse.json(
         { message: "No category found for this user." },
@@ -153,7 +171,7 @@ export async function POST(request) {
     }
 
     const transaction = await prisma.$transaction(async (tx) => {
-      let categoryId = selectedCategory?.id;
+      let categoryId = categoryById?.id || categoryByName?.id || null;
       if (!categoryId && categoryName) {
         const createdCategory = await tx.category.create({
           data: {
@@ -164,6 +182,9 @@ export async function POST(request) {
           select: { id: true },
         });
         categoryId = createdCategory.id;
+      }
+      if (!categoryId) {
+        categoryId = selectedCategory.id;
       }
 
       const created = await tx.transaction.create({
