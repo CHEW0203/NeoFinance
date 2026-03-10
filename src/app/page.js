@@ -8,9 +8,14 @@ function categoryIcon(category) {
   if (category?.icon) return category.icon;
   const name = category?.name;
   const value = String(name || "").toLowerCase();
+  if (value.includes("salary")) return "💼";
+  if (value.includes("allowance")) return "💰";
+  if (value.includes("bonus")) return "🏆";
+  if (value.includes("income")) return "📈";
   if (value.includes("food")) return "🍜";
   if (value.includes("transport")) return "🚌";
   if (value.includes("gift")) return "🎁";
+  if (category?.type === "income") return "💼";
   return "📦";
 }
 
