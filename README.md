@@ -1,8 +1,9 @@
 # NeoFinance
 
-NeoFinance is an AI-powered finance tracking and analysis platform built to help users form strong money habits through consistent daily tracking, clear insight visibility, and actionable guidance.
+NeoFinance is an AI-powered finance tracking and analysis platform built to help users develop lasting money habits, not just record transactions. It combines daily expense logging, budgeting, and behavioral feedback into one workflow so users can track spending consistently and make better financial decisions over time.
 
-Beyond basic expense logging, NeoFinance focuses on intelligent personal finance support with AI-assisted categorization, receipt understanding, behavior-level spending analysis, and recommendation-driven financial feedback.
+Beyond traditional expense apps, NeoFinance adds intelligent features such as AI-assisted category detection, receipt understanding, personalized spending insights, and automated report summaries across monthly, half-yearly, and yearly views. The goal is to turn raw financial data into practical actions by highlighting spending patterns, identifying risk areas, and guiding users toward smarter, goal-aligned financial behavior.
+
 
 ## Project Status
 
