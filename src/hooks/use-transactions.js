@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import {
   createTransaction,
   deleteTransaction,
@@ -14,6 +14,8 @@ const NOTIFY_STATE_KEY = "ft_target_notify_state";
 const NOTIFICATIONS_KEY = "ft_notifications";
 const NOTIFICATIONS_VERSION_KEY = "ft_notifications_version";
 const NOTIFICATIONS_VERSION = "v5";
+const STREAK_STATE_KEY = "ft_streak_state";
+const STREAK_MILESTONES = [50, 100, 150, 200];
 
 const INITIAL_FORM = {
   title: "",
@@ -25,6 +27,21 @@ const INITIAL_FORM = {
 
 function todayKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
+}
+
+function parseDateKey(key) {
+  if (!key) return null;
+  const parts = String(key).split("-").map(Number);
+  if (parts.length !== 3) return null;
+  const [year, month, day] = parts;
+  if (!year || !month || !day) return null;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function addUtcDays(date, days) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
 }
 
 function safeParse(value, fallback) {
@@ -233,20 +250,177 @@ async function checkTargetNotifications(rows) {
   }
 }
 
+async function checkStreakNotifications(rows) {
+  if (typeof window === "undefined") return;
+
+  const personaPrompt = window.localStorage.getItem(PERSONA_KEY) || "";
+  const language = readCookieLanguage();
+  const t = getDictionary(language);
+  const streakCopy = t?.streak || {};
+  const streakFallback = streakCopy.fallback || {};
+  const streakNotifications = streakCopy.notifications || {};
+  const notificationTitles = {
+    continue: streakNotifications.streakContinue || "Streak Update",
+    break: streakNotifications.streakBreak || "Streak Reset",
+    milestone: streakNotifications.streakMilestone || "Streak Milestone",
+  };
+
+  const today = new Date();
+  const todayKeyValue = todayKey(today);
+  const todayDate = parseDateKey(todayKeyValue);
+  if (!todayDate) return;
+  const yesterdayDate = addUtcDays(todayDate, -1);
+  const yesterdayKeyValue = todayKey(yesterdayDate);
+
+  const recordDays = new Set(rows.map((record) => todayKey(new Date(record.transactionDate))));
+
+  const storedState = safeParse(window.localStorage.getItem(STREAK_STATE_KEY), {
+    lastChecked: "",
+    current: 0,
+  });
+
+  if (!storedState.lastChecked) {
+    const initState = { lastChecked: yesterdayKeyValue, current: 0 };
+    window.localStorage.setItem(STREAK_STATE_KEY, JSON.stringify(initState));
+    return;
+  }
+
+  if (storedState.lastChecked === todayKeyValue) return;
+
+  const lastCheckedDate = parseDateKey(storedState.lastChecked);
+  if (!lastCheckedDate) {
+    const resetState = { lastChecked: yesterdayKeyValue, current: 0 };
+    window.localStorage.setItem(STREAK_STATE_KEY, JSON.stringify(resetState));
+    return;
+  }
+
+  if (lastCheckedDate.getTime() > todayDate.getTime()) {
+    const resetState = { lastChecked: yesterdayKeyValue, current: 0 };
+    window.localStorage.setItem(STREAK_STATE_KEY, JSON.stringify(resetState));
+    return;
+  }
+
+  let cursor = addUtcDays(lastCheckedDate, 1);
+  const end = addUtcDays(todayDate, -1);
+  if (cursor.getTime() > end.getTime()) {
+    return;
+  }
+
+  let streak = Number(storedState.current) || 0;
+  const results = [];
+
+  while (cursor.getTime() <= end.getTime()) {
+    const key = todayKey(cursor);
+    const success = recordDays.has(key);
+    if (success) {
+      streak += 1;
+      const milestone = STREAK_MILESTONES.includes(streak);
+      results.push({ key, success: true, milestone, streak });
+    } else {
+      const previousStreak = streak;
+      streak = 0;
+      results.push({ key, success: false, previousStreak });
+    }
+    cursor = addUtcDays(cursor, 1);
+  }
+
+  window.localStorage.setItem(
+    STREAK_STATE_KEY,
+    JSON.stringify({ lastChecked: todayKeyValue, current: streak })
+  );
+
+  for (const result of results) {
+    const isMilestone = result.success && result.milestone;
+    const intent = result.success
+      ? isMilestone
+        ? "streak_milestone"
+        : "streak_continue"
+      : "streak_break";
+    const title = result.success
+      ? isMilestone
+        ? notificationTitles.milestone
+        : notificationTitles.continue
+      : notificationTitles.break;
+
+    let fallback = "";
+    if (result.success) {
+      if (isMilestone) {
+        fallback = (streakFallback.streakMilestone || "(^_^) Amazing! You hit a {count}-day streak!").replace(
+          "{count}",
+          String(result.streak)
+        );
+      } else {
+        fallback = streakFallback.streakContinue || "(^_^) Nice! You kept your streak going.";
+      }
+    } else {
+      fallback =
+        streakFallback.streakBreak || "(._.) It's okay to miss a day. Let's start again tomorrow.";
+    }
+
+    try {
+      const text = personaPrompt
+        ? await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent,
+              streak: result.streak || 0,
+              milestone: isMilestone ? result.streak : undefined,
+              previousStreak: result.previousStreak || 0,
+            },
+            language
+          )
+        : fallback;
+      appendNotification({ title, message: text || fallback });
+      const reply = text || fallback;
+      if (reply) window.localStorage.setItem(PERSONA_REPLY_KEY, reply);
+    } catch (err) {
+      const friendly = getFriendlyErrorMessage(err, t);
+      const reply = friendly || fallback;
+      appendNotification({ title, message: reply });
+      window.localStorage.setItem(PERSONA_REPLY_KEY, reply);
+    }
+  }
+}
+
 export function useTransactions() {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState(INITIAL_FORM);
+  const transactionsRef = useRef([]);
+
+  useEffect(() => {
+    transactionsRef.current = transactions;
+  }, [transactions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let timer = null;
+    const schedule = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now);
+      nextMidnight.setHours(24, 0, 5, 0);
+      const delay = Math.max(1000, nextMidnight.getTime() - now.getTime());
+      timer = setTimeout(async () => {
+        await checkStreakNotifications(transactionsRef.current);
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   async function loadTransactions() {
     setIsLoading(true);
     setError("");
     try {
-      const rows = await fetchTransactions();
+      const rows = await fetchTransactions({ limit: 200 });
       setTransactions(rows);
       await checkTargetNotifications(rows);
+      await checkStreakNotifications(rows);
     } catch (loadError) {
       setError(loadError.message || "Failed to load transactions.");
     } finally {
@@ -300,3 +474,11 @@ export function useTransactions() {
     removeTransaction,
   };
 }
+
+
+
+
+
+
+
+

@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
 
 const VALID_TYPES = new Set(["income", "expense"]);
@@ -38,8 +39,8 @@ async function getAuthenticatedUserWithBaseData() {
 }
 
 // Allowed icons for AI to choose from when creating a new category
-const EXPENSE_ICONS = ["🍜", "☕", "🍔", "🍕", "🛍️", "🎁", "🚌", "🎮", "🎵", "🏠", "📱", "🧾"];
-const INCOME_ICONS = ["💼", "💰", "💸", "🏦", "📈", "🪙", "💳", "🧠", "🎯", "🧾", "🛠️", "🏆", "🎓", "👔", "📊"];
+const EXPENSE_ICONS = ["ðŸœ", "â˜•", "ðŸ”", "ðŸ•", "ðŸ›ï¸", "ðŸŽ", "ðŸšŒ", "ðŸŽ®", "ðŸŽµ", "ðŸ ", "ðŸ“±", "ðŸ§¾"];
+const INCOME_ICONS = ["ðŸ’¼", "ðŸ’°", "ðŸ’¸", "ðŸ¦", "ðŸ“ˆ", "ðŸª™", "ðŸ’³", "ðŸ§ ", "ðŸŽ¯", "ðŸ§¾", "ðŸ› ï¸", "ðŸ†", "ðŸŽ“", "ðŸ‘”", "ðŸ“Š"];
 
 // ==========================================
 // AI Helper: Gemini 2.5 Flash Auto-Categorization
@@ -377,13 +378,8 @@ export async function POST(request) {
       : null;
 
     const selectedCategory = categoryById || categoryByName || defaultCategory;
-    
-    if (!selectedCategory && !categoryName) {
-      return NextResponse.json(
-        { message: "No category found for this user." },
-        { status: 400 }
-      );
-    }
+    const existingColors = new Set(user.categories.map((item) => item.color).filter(Boolean));
+    const categoryColor = pickCategoryColor(existingColors);
 
     const transaction = await prisma.$transaction(async (tx) => {
       let categoryId = categoryById?.id || categoryByName?.id || null;
@@ -395,6 +391,7 @@ export async function POST(request) {
             name: categoryName,
             type,
             icon: categoryIcon || null,
+            color: categoryColor,
             userId: user.id,
           },
           select: { id: true },
@@ -442,3 +439,8 @@ export async function POST(request) {
     );
   }
 }
+
+
+
+
+

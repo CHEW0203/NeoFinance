@@ -122,6 +122,11 @@ export default function TargetPage() {
   const targetFallback = targetCopy.fallback || {};
   const targetNotifications = targetCopy.notifications || {};
 
+  const askTargetFallback =
+    targetFallback.askTarget || targetCopy.defaultReply || "(._.) How much do you want to spend today?";
+  const idleTipFallback =
+    targetFallback.idleTip || "(._.) Tip: keep your spending tied to your priorities.";
+
   const notificationTitles = {
     targetSet: targetNotifications.targetSet || "Target Set",
     halfwayAlert: targetNotifications.halfwayAlert || "Halfway Alert",
@@ -237,11 +242,13 @@ export default function TargetPage() {
       if (idleTriggeredRef.current) return;
 
       idleTriggeredRef.current = true;
+      const needsTarget = !latestRef.current.targetAmount;
+      const idleIntent = needsTarget ? "ask_target" : "idle_tip";
       setIsReplying(true);
       fetchPersonaMessage(
         {
           persona: latestRef.current.personaPrompt,
-          intent: "idle_tip",
+          intent: idleIntent,
           target: latestRef.current.targetAmount,
           remaining: latestRef.current.remaining,
           spent: latestRef.current.spentToday,
@@ -255,9 +262,8 @@ export default function TargetPage() {
         })
         .catch((err) => {
           const friendly = getFriendlyErrorMessage(err, t);
-          updatePersonaReply(
-            friendly || targetFallback.idleTip || "(._.) Tip: keep your spending tied to your priorities."
-          );
+          const fallback = needsTarget ? askTargetFallback : idleTipFallback;
+          updatePersonaReply(friendly || fallback);
         })
         .finally(() => {
           setIsReplying(false);
@@ -265,7 +271,7 @@ export default function TargetPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [personaPrompt, isBlocking, isReplying, isQuestionLoading, language, t, targetFallback.idleTip]);
+  }, [personaPrompt, isBlocking, isReplying, isQuestionLoading, language, t, askTargetFallback, idleTipFallback]);
 
   useEffect(() => {
     if (!targetAmount || !personaPrompt || isLoading) return;
@@ -529,6 +535,20 @@ export default function TargetPage() {
     setPendingTarget(null);
   }
 
+  function handleResetTarget() {
+    setTargetAmount(null);
+    setTargetDate("");
+    setPendingTarget(null);
+    setTargetInput("");
+    setError("");
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(TARGET_KEY);
+      window.localStorage.removeItem(TARGET_DATE_KEY);
+      window.localStorage.removeItem(NOTIFY_STATE_KEY);
+    }
+    updatePersonaReply(askTargetFallback);
+  }
+
   const showSetup = !personaPrompt;
   const ringColor = isOverBudget ? "#ef4444" : "#22c55e";
   const ringProgress = isOverBudget ? 1 : progressRemaining;
@@ -572,7 +592,7 @@ export default function TargetPage() {
         ) : (
           <div className="mt-6 flex flex-1 flex-col gap-6">
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-              <p>{personaReply || targetCopy.defaultReply || "(._.) How much do you want to spend today?"}</p>
+              <p>{personaReply || askTargetFallback}</p>
               {isReplying ? (
                 <span className="ai-dots" aria-label="Loading">
                   <span className="ai-dot" />
@@ -665,13 +685,20 @@ export default function TargetPage() {
                 ) : null}
               </form>
 
-              <div className="text-xs text-slate-400">
+              <div className="flex items-center gap-3 text-xs text-slate-400">
                 {targetAmount ? (
                   <>
                     <span>{targetCopy.spentToday || "Spent today:"} </span>
                     <span className={isOverBudget ? "text-red-500" : "text-slate-400"}>
                       {formatCurrency(spentToday, "RM")}
                     </span>
+                    <button
+                      type="button"
+                      onClick={handleResetTarget}
+                      className="text-xs font-semibold text-slate-500 underline underline-offset-2 transition hover:text-slate-700"
+                    >
+                      {targetCopy.resetTarget || "Reset target"}
+                    </button>
                   </>
                 ) : null}
               </div>
@@ -725,3 +752,5 @@ export default function TargetPage() {
     </main>
   );
 }
+
+

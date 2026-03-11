@@ -17,14 +17,18 @@ function formatAmount(value) {
   return `RM ${Number(value).toFixed(2)}`;
 }
 
-function buildUserPrompt({ persona, intent, target, remaining, spent, question }) {
+function buildUserPrompt({ persona, intent, target, remaining, spent, question, streak, milestone, previousStreak, report }) {
   const targetText = formatAmount(target);
   const remainingText = formatAmount(remaining);
   const spentText = formatAmount(spent);
+  const streakValue = Number.isFinite(Number(streak)) ? Number(streak) : 0;
+  const milestoneValue = Number.isFinite(Number(milestone)) ? Number(milestone) : 0;
+  const previousStreakValue = Number.isFinite(Number(previousStreak)) ? Number(previousStreak) : 0;
+  const reportText = String(report || "").trim();
 
   switch (intent) {
     case "ask_target":
-      return `Personality: ${persona}. Write one short English line asking the user what today's spending target is.`;
+      return `Personality: ${persona}. Write one short English line asking the user what today's spending target is, and add a gentle encouragement to set a realistic amount.`;
     case "encourage_start":
       return `Personality: ${persona}. Write one short English encouragement about staying within today's target of ${targetText}.`;
     case "caution_half":
@@ -38,7 +42,15 @@ function buildUserPrompt({ persona, intent, target, remaining, spent, question }
     case "idle_tip":
       return `Personality: ${persona}. Write one short English financial tip for today.`;
     case "financial_q":
-      return `Personality: ${persona}. Answer the user's question in one short English line and include one practical tip. Question: ${question}`;
+      return `Personality: ${persona}. Answer the user's question in 2-4 concise sentences and include at least two practical tips. Keep it friendly and specific. Question: ${question}`;
+    case "streak_continue":
+      return `Personality: ${persona}. Write one short English encouragement about keeping a ${streakValue}-day streak. Keep it upbeat and supportive.`;
+    case "streak_break":
+      return `Personality: ${persona}. Write one short English comforting line that the user missed a day and their ${previousStreakValue}-day streak ended. Encourage restarting tomorrow.`;
+    case "streak_milestone":
+      return `Personality: ${persona}. Write one short English celebration for reaching a ${milestoneValue}-day streak and encourage staying consistent.`;
+    case "report_summary":
+      return `Personality: ${persona}. Write 3-5 sentences with clear, practical spending advice and two actionable next steps based on this report: ${reportText}`;
     default:
       return `Personality: ${persona}. Write one short English line in that personality.`;
   }
@@ -63,13 +75,20 @@ export async function POST(request) {
     return NextResponse.json({ error: "The personality you described is not compliant." }, { status: 400 });
   }
 
-  const baseSystemPrompt =
-    "You create a single short English reply. Start with one fitting emoticon. Keep it under 140 characters. Stay in character but always provide helpful, relevant information. No explicit or adult content. No extra explanation.";
+  const isReportSummary = intent === "report_summary";
+  const isLongForm = isReportSummary || intent === "financial_q";
+  const maxLength = isReportSummary ? 650 : isLongForm ? 450 : 140;
+
+  const baseSystemPrompt = isReportSummary
+    ? "You create a detailed reply of 3-5 sentences with clear, practical spending advice. Start with one fitting emoticon. Keep it under 650 characters. Stay in character and include two actionable suggestions. No explicit or adult content. No extra explanation."
+    : isLongForm
+    ? "You create a concise but detailed reply of 2-4 sentences. Start with one fitting emoticon. Keep it under 450 characters. Stay in character but always provide helpful, relevant information. No explicit or adult content. No extra explanation."
+    : "You create a single short English reply. Start with one fitting emoticon. Keep it under 140 characters. Stay in character but always provide helpful, relevant information. No explicit or adult content. No extra explanation.";
 
   const systemPrompt =
     language === "en"
       ? baseSystemPrompt
-      : `${baseSystemPrompt} Then translate the final reply into ${LANGUAGE_LABELS[language]}. Keep the emoticon at the start. Return only the translated text. Keep it under 140 characters in the target language. No labels or quotation marks.`;
+      : `${baseSystemPrompt} Then translate the final reply into ${LANGUAGE_LABELS[language]}. Keep the emoticon at the start. Return only the translated text. Keep it under ${maxLength} characters in the target language. No labels or quotation marks.`;
 
   const userPrompt = buildUserPrompt({
     persona,
@@ -78,6 +97,10 @@ export async function POST(request) {
     target: body?.target,
     remaining: body?.remaining,
     spent: body?.spent,
+    streak: body?.streak,
+    milestone: body?.milestone,
+    previousStreak: body?.previousStreak,
+    report: body?.report,
   });
 
   const response = await fetch(
@@ -116,3 +139,12 @@ export async function POST(request) {
 
   return NextResponse.json({ text });
 }
+
+
+
+
+
+
+
+
+

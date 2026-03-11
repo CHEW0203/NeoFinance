@@ -6,6 +6,8 @@ import { useLanguage } from "@/hooks/use-language";
 
 const STORAGE_KEY = "ft_notifications";
 const TOAST_DURATION = 15000;
+let sharedAudioContext = null;
+let audioUnlocked = false;
 
 function safeParse(value, fallback) {
   if (!value) return fallback;
@@ -22,27 +24,65 @@ function readNotifications() {
   return safeParse(stored, []);
 }
 
-function playBeep() {
-  if (typeof window === "undefined") return;
+function getAudioContext() {
+  if (typeof window === "undefined") return null;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return null;
+  if (!sharedAudioContext) {
+    sharedAudioContext = new AudioContext();
+  }
+  return sharedAudioContext;
+}
+
+function unlockAudioContext() {
+  const context = getAudioContext();
+  if (!context) return false;
+  if (context.state === "suspended") {
+    context.resume().catch(() => {});
+  }
+  audioUnlocked = context.state === "running";
+  return audioUnlocked;
+}
+
+function playDingDong() {
+  const context = getAudioContext();
+  if (!context) return;
+  if (!audioUnlocked && context.state !== "running") return;
+
   try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
+    const masterGain = context.createGain();
+    masterGain.gain.value = 0.08;
+    masterGain.connect(context.destination);
 
-    oscillator.type = "sine";
-    oscillator.frequency.value = 880;
-    gain.gain.value = 0.04;
+    const now = context.currentTime;
+    const tones = [
+      { freq: 880, duration: 0.12 },
+      { freq: 660, duration: 0.18 },
+    ];
+    const gap = 0.04;
+    let startAt = now;
 
-    oscillator.connect(gain);
-    gain.connect(context.destination);
+    tones.forEach((tone) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
 
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.15);
-    oscillator.onended = () => {
-      context.close();
-    };
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(tone.freq, startAt);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.2, startAt + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + tone.duration);
+
+      oscillator.connect(gain);
+      gain.connect(masterGain);
+
+      oscillator.start(startAt);
+      oscillator.stop(startAt + tone.duration);
+      oscillator.onended = () => {
+        oscillator.disconnect();
+        gain.disconnect();
+      };
+      startAt += tone.duration + gap;
+    });
   } catch (error) {
     // Ignore autoplay or unsupported errors.
   }
@@ -59,6 +99,18 @@ export function NotificationToastHost() {
     if (typeof window === "undefined") return;
     const initial = readNotifications();
     lastCountRef.current = initial.length;
+
+    const handleUnlock = () => {
+      if (unlockAudioContext()) {
+        window.removeEventListener("pointerdown", handleUnlock);
+        window.removeEventListener("keydown", handleUnlock);
+        window.removeEventListener("touchstart", handleUnlock);
+      }
+    };
+
+    window.addEventListener("pointerdown", handleUnlock);
+    window.addEventListener("keydown", handleUnlock);
+    window.addEventListener("touchstart", handleUnlock);
 
     const checkForNew = () => {
       const list = readNotifications();
@@ -85,6 +137,9 @@ export function NotificationToastHost() {
     window.addEventListener("storage", handleStorage);
 
     return () => {
+      window.removeEventListener("pointerdown", handleUnlock);
+      window.removeEventListener("keydown", handleUnlock);
+      window.removeEventListener("touchstart", handleUnlock);
       clearInterval(interval);
       window.removeEventListener("storage", handleStorage);
     };
@@ -98,7 +153,7 @@ export function NotificationToastHost() {
 
   useEffect(() => {
     if (!active) return;
-    playBeep();
+    playDingDong();
     const timer = setTimeout(() => {
       setActive(null);
     }, TOAST_DURATION);
@@ -150,3 +205,5 @@ export function NotificationToastHost() {
     </div>
   );
 }
+
+
