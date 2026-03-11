@@ -1,12 +1,14 @@
 import { BackButton } from "@/components/back-button";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/auth/session";
+import { getServerDictionary } from "@/lib/i18n/server";
 
 function dateKey(date) {
   return new Date(date).toISOString().slice(0, 10);
 }
 
 export default async function StreakPage() {
+  const { t } = await getServerDictionary();
   const user = await requireCurrentUser();
   const transactions = user
     ? await prisma.transaction.findMany({
@@ -17,7 +19,7 @@ export default async function StreakPage() {
       })
     : [];
 
-  const recordDays = new Set(transactions.map((t) => dateKey(t.transactionDate)));
+  const recordDays = new Set(transactions.map((record) => dateKey(record.transactionDate)));
   const cells = [];
   for (let i = 29; i >= 0; i -= 1) {
     const day = new Date();
@@ -42,9 +44,9 @@ export default async function StreakPage() {
       <div className="mx-auto w-full max-w-3xl space-y-5">
         <BackButton fallbackHref="/" />
         <section className="rounded-3xl border border-slate-300 bg-white p-6">
-          <h1 className="text-2xl font-semibold text-slate-900">Streak</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">{t.pages.streak}</h1>
           <p className="mt-2 text-sm text-slate-600">
-            🔥 Current streak: {streak} day{streak === 1 ? "" : "s"}
+            🔥 {t.pages.currentStreak}: {streak} {streak === 1 ? t.pages.day : t.pages.days}
           </p>
 
           <div className="mt-5 grid grid-cols-10 gap-2">

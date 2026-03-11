@@ -14,7 +14,9 @@ export function middleware(request) {
     pathname.startsWith("/gallery") ||
     pathname.startsWith("/report") ||
     pathname.startsWith("/streak");
-  const protectedApi = pathname.startsWith("/api/transactions");
+  const protectedApi =
+    pathname.startsWith("/api/transactions") ||
+    pathname.startsWith("/api/categories");
 
   if (!hasSessionCookie && protectedPage) {
     const loginUrl = new URL("/login", request.url);
@@ -43,5 +45,6 @@ export const config = {
     "/report/:path*",
     "/streak/:path*",
     "/api/transactions/:path*",
+    "/api/categories/:path*",
   ],
 };

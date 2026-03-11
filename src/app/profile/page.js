@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { BackButton } from "@/components/back-button";
 import { LogoutButton } from "@/components/logout-button";
 import { fetchProfile, updateProfile } from "@/services/auth-api";
+import { useLanguage } from "@/hooks/use-language";
 
 export default function ProfilePage() {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -22,7 +24,7 @@ export default function ProfilePage() {
       setProfile(result.user);
       setUsername(result.user.username);
     } catch (requestError) {
-      setError(requestError.message || "Failed to load profile.");
+      setError(requestError.message || t.profile.loadFailed);
     } finally {
       setIsLoading(false);
     }
@@ -30,6 +32,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSave(event) {
@@ -43,10 +46,10 @@ export default function ProfilePage() {
         password: password.trim() || undefined,
       });
       setPassword("");
-      setSuccess("Profile updated.");
+      setSuccess(t.profile.updated);
       await loadProfile();
     } catch (requestError) {
-      setError(requestError.message || "Failed to update profile.");
+      setError(requestError.message || t.profile.updateFailed);
     } finally {
       setIsSaving(false);
     }
@@ -57,7 +60,7 @@ export default function ProfilePage() {
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe_0%,#f8fafc_38%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
         <div className="mx-auto w-full max-w-4xl">
           <BackButton fallbackHref="/" />
-          <p className="mt-6 text-sm text-slate-600">Loading profile...</p>
+          <p className="mt-6 text-sm text-slate-600">{t.profile.loadingProfile}</p>
         </div>
       </main>
     );
@@ -70,14 +73,16 @@ export default function ProfilePage() {
 
         <section className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)]">
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-700">
-            Profile
+            {t.profile.title}
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
             {profile?.username}
           </h1>
 
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Transactions</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+              {t.profile.transactions}
+            </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">
               {profile?.transactionCount || 0}
             </p>
@@ -88,7 +93,7 @@ export default function ProfilePage() {
               type="text"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="Username"
+              placeholder={t.auth.username}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-600"
               required
             />
@@ -96,7 +101,7 @@ export default function ProfilePage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="New password (optional, min 8 characters)"
+              placeholder={t.profile.newPassword}
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-600"
             />
             <button
@@ -104,7 +109,7 @@ export default function ProfilePage() {
               disabled={isSaving}
               className="rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSaving ? "Saving..." : "Save profile"}
+              {isSaving ? t.profile.saving : t.profile.saveProfile}
             </button>
           </form>
 

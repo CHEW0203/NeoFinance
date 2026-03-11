@@ -68,6 +68,10 @@ npm install
 ```bash
 copy .env.example .env
 ```
+⚠️ IMPORTANT for AI Features: > Open the newly created .env file and add your Gemini API Key for the smart auto-categorization feature to work. You can get a free key from Google AI Studio.
+```bash
+GEMINI_API_KEY="Copy_Your_API_Key_Here"
+```
 
 5. Generate Prisma client:
 

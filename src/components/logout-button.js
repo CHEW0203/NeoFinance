@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { logoutUser } from "@/services/auth-api";
+import { useLanguage } from "@/hooks/use-language";
 
 export function LogoutButton() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   async function handleLogout() {
     await logoutUser();
@@ -18,7 +20,7 @@ export function LogoutButton() {
       onClick={handleLogout}
       className="rounded-full border border-slate-300 bg-white px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
     >
-      Logout
+      {t.common.logout}
     </button>
   );
 }

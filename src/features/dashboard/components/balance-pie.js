@@ -1,6 +1,11 @@
 import { formatCurrency } from "@/utils/format";
 
-export function BalancePie({ totalBalance = 0, monthlyExpense = 0, currency = "RM" }) {
+export function BalancePie({
+  totalBalance = 0,
+  monthlyExpense = 0,
+  currency = "RM",
+  labels = {},
+}) {
   const balance = totalBalance;
   const spent = Math.max(monthlyExpense, 0);
   const absoluteBalance = Math.abs(balance);
@@ -19,7 +24,9 @@ export function BalancePie({ totalBalance = 0, monthlyExpense = 0, currency = "R
       <div className="relative mx-auto h-56 w-56 rounded-full p-4" style={gradientStyle}>
         <div className="flex h-full w-full items-center justify-center rounded-full bg-white text-center">
           <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Balance</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+              {labels.balance || "Balance"}
+            </p>
             <p
               className={`mt-2 text-2xl font-semibold tracking-tight ${
                 overspent ? "text-red-600" : "text-slate-950"
@@ -28,7 +35,10 @@ export function BalancePie({ totalBalance = 0, monthlyExpense = 0, currency = "R
               {formatCurrency(balance, currency)}
             </p>
             <p className="mt-2 text-sm text-slate-500">
-              Spent this month: {formatCurrency(spent, currency)}
+              {labels.spentThisMonth || "Spent this month:"}
+              <span className="block font-semibold text-amber-500">
+                {formatCurrency(spent, currency)}
+              </span>
             </p>
           </div>
         </div>
