@@ -4,10 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logoutUser } from "@/services/auth-api";
+import { useNotifications } from "@/lib/use-notifications";
 
 export function TopNav({ monthLabel, currentUser }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const { unreadCount } = useNotifications();
+  const badgeLabel = unreadCount >= 9 ? "9+" : `${unreadCount}+`;
 
   async function handleLogout() {
     await logoutUser();
@@ -25,15 +28,31 @@ export function TopNav({ monthLabel, currentUser }) {
           className="text-2xl leading-none text-slate-800"
           aria-label="Open menu"
         >
-          ≡
+          {"\u2261"}
         </button>
         <p className="text-lg font-semibold tracking-tight text-slate-900">{monthLabel}</p>
         <div className="flex items-center gap-3 text-2xl text-slate-800">
-          <Link href="/notifications" aria-label="Notification" title="Notification">
-            🔔
+          <Link
+            href="/notifications"
+            aria-label="Notification"
+            title="Notification"
+            className="relative inline-flex h-10 w-10 items-center justify-center"
+          >
+            <span aria-hidden="true">{"\u{1F514}"}</span>
+            {unreadCount > 0 ? (
+              <span
+                className="absolute right-0 top-0 flex h-5 min-w-[1.25rem] -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white"
+                aria-label={`${badgeLabel} unread notifications`}
+              >
+                {badgeLabel}
+              </span>
+            ) : null}
+          </Link>
+          <Link href="/target" aria-label="Target" title="Target">
+            {"\u{1F3AF}"}
           </Link>
           <Link href="/calendar" aria-label="Calendar" title="Calendar">
-            📅
+            {"\u{1F4C5}"}
           </Link>
         </div>
       </nav>
@@ -89,6 +108,13 @@ export function TopNav({ monthLabel, currentUser }) {
                     className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
                   >
                     Streak
+                  </Link>
+                  <Link
+                    href="/notifications"
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-800"
+                  >
+                    Notifications
                   </Link>
                   <Link
                     href="/transactions"

@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjsnpm";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createUserSession, setSessionCookie } from "@/lib/auth/session";
