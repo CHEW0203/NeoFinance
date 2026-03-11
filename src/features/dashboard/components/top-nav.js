@@ -1,15 +1,18 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logoutUser } from "@/services/auth-api";
 import { TransactionList } from "@/features/transactions/components";
 import { useLanguage } from "@/hooks/use-language";
+import { useNotifications } from "@/lib/use-notifications";
+import { logoutUser } from "@/services/auth-api";
 
 export function TopNav({ monthLabel, currentUser }) {
   const router = useRouter();
   const { language, setLanguage, t } = useLanguage();
+  const { unreadCount } = useNotifications();
+  const badgeLabel = unreadCount >= 9 ? "9+" : `${unreadCount}+`;
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,6 +74,17 @@ export function TopNav({ monthLabel, currentUser }) {
     };
   }, [searchQuery, searchOpen, currentUser]);
 
+    useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    if (searchOpen) {
+      document.body.setAttribute("data-search-open", "true");
+    } else {
+      document.body.removeAttribute("data-search-open");
+    }
+    return () => {
+      document.body.removeAttribute("data-search-open");
+    };
+  }, [searchOpen]);
   function closeSearch() {
     setSearchOpen(false);
     setSearchQuery("");
@@ -79,34 +93,48 @@ export function TopNav({ monthLabel, currentUser }) {
 
   return (
     <>
-      <nav className="grid grid-cols-[44px_1fr_64px] items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <nav className="relative flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <button
           type="button"
           onClick={() => setOpen(true)}
           className="text-2xl leading-none text-slate-800"
           aria-label={t.menu.menu}
         >
-          ☰
+          {"\u2261"}
         </button>
-        <p className="pl-3 text-center text-lg font-semibold tracking-tight text-slate-900">
+        {!searchOpen ? (
+        <p className="absolute left-1/2 -translate-x-1/2 text-lg font-semibold tracking-tight text-slate-900">
           {monthLabel}
         </p>
-        <div className="flex items-center justify-end gap-3 text-2xl text-slate-800">
+      ) : null}
+        <div className="flex items-center gap-3 whitespace-nowrap text-2xl text-slate-800">
           <Link
             href="/notifications"
             aria-label={t.menu.notification}
             title={t.menu.notification}
+            className="relative inline-flex h-10 w-10 items-center justify-center"
           >
-            🔔
+            <span aria-hidden="true">{"\u{1F514}"}</span>
+            {unreadCount > 0 ? (
+              <span
+                className="absolute right-0 top-0 flex h-5 min-w-[1.25rem] -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white"
+                aria-label={`${badgeLabel} unread notifications`}
+              >
+                {badgeLabel}
+              </span>
+            ) : null}
+          </Link>
+          <Link href="/target" aria-label={t.menu.target || "Target"} title={t.menu.target || "Target"}>
+            {"\u{1F3AF}"}
           </Link>
           <Link href="/calendar" aria-label={t.menu.calendar} title={t.menu.calendar}>
-            📅
+            {"\u{1F4C5}"}
           </Link>
         </div>
       </nav>
 
       {searchOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 pt-20 sm:pt-24">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-white pt-20 sm:pt-24">
           <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-xl sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <input
@@ -166,7 +194,7 @@ export function TopNav({ monthLabel, currentUser }) {
                       }}
                       className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-xs font-semibold text-slate-800"
                     >
-                      <span className="text-sm">🔍</span>
+                      <span className="text-sm">{"\u{1F50D}"}</span>
                       {t.menu.search}
                     </button>
                     <Link
@@ -203,6 +231,13 @@ export function TopNav({ monthLabel, currentUser }) {
                       className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
                     >
                       {t.menu.streak}
+                    </Link>
+                    <Link
+                      href="/notifications"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.menu.notification}
                     </Link>
                     <Link
                       href="/transactions"
@@ -257,7 +292,7 @@ export function TopNav({ monthLabel, currentUser }) {
                         : "border-slate-300 text-slate-700"
                     }`}
                   >
-                    中文
+                    {"\u4e2d\u6587"}
                   </button>
                   <button
                     type="button"
@@ -289,3 +324,13 @@ export function TopNav({ monthLabel, currentUser }) {
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+

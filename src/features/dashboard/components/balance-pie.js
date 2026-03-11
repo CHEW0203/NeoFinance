@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/utils/format";
+﻿import { formatCurrency } from "@/utils/format";
 
 export function BalancePie({
   totalBalance = 0,
@@ -36,9 +36,9 @@ export function BalancePie({
             </p>
             <p className="mt-2 text-sm text-slate-500">
               {labels.spentThisMonth || "Spent this month:"}
-              <span className="block font-semibold text-amber-500">
-                {formatCurrency(spent, currency)}
-              </span>
+            </p>
+            <p className="text-sm font-semibold text-amber-500">
+              {formatCurrency(spent, currency)}
             </p>
           </div>
         </div>
@@ -46,3 +46,9 @@ export function BalancePie({
     </section>
   );
 }
+
+
+
+
+
+

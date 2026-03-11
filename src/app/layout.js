@@ -1,6 +1,7 @@
-import { Geist, Geist_Mono } from "next/font/google";
+﻿import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { getServerLanguage } from "@/lib/i18n/server";
+import { NotificationToastHost } from "@/components/notification-toast-host";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,10 +23,9 @@ export default async function RootLayout({ children }) {
 
   return (
     <html lang={language}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
+        <NotificationToastHost />
       </body>
     </html>
   );

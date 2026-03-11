@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
 
 const VALID_TYPES = new Set(["income", "expense"]);
@@ -157,6 +158,8 @@ export async function PATCH(request, context) {
         )
       : null;
     const selectedCategory = categoryById || categoryByName || defaultCategory || null;
+    const existingColors = new Set(user.categories.map((item) => item.color).filter(Boolean));
+    const categoryColor = pickCategoryColor(existingColors);
 
     const updated = await prisma.$transaction(async (tx) => {
       let categoryId = categoryById?.id || categoryByName?.id || null;
@@ -166,6 +169,7 @@ export async function PATCH(request, context) {
             name: categoryName,
             type,
             icon: categoryIcon || null,
+            color: categoryColor,
             userId: currentUser.id,
           },
           select: { id: true },
@@ -284,3 +288,10 @@ export async function DELETE(_request, context) {
     );
   }
 }
+
+
+
+
+
+
+

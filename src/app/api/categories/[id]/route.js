@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
 
 async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {
@@ -14,11 +15,18 @@ async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {
   });
 
   if (!fallback) {
+    const colors = await tx.category.findMany({
+      where: { userId },
+      select: { color: true },
+    });
+    const usedColors = new Set(colors.map((item) => item.color).filter(Boolean));
+    const color = pickCategoryColor(usedColors);
     fallback = await tx.category.create({
       data: {
         name: "Others",
         type,
-        icon: "📦",
+        icon: "ðŸ“¦",
+        color,
         userId,
       },
       select: { id: true },
@@ -80,3 +88,8 @@ export async function DELETE(_request, context) {
     );
   }
 }
+
+
+
+
+
