@@ -18,6 +18,12 @@ function startOfDay(date) {
   return next;
 }
 
+function dayKey(dateValue) {
+  const value = new Date(dateValue);
+  if (Number.isNaN(value.getTime())) return "";
+  return value.toISOString().slice(0, 10);
+}
+
 function clampNumber(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -350,17 +356,16 @@ export default function ReportPage() {
     return startOfDay(start);
   }, [range]);
 
-  const rangeDays = useMemo(() => {
-    const now = new Date();
-    const diff = now.getTime() - rangeStart.getTime();
-    return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  }, [rangeStart]);
-
   const typeRows = useMemo(() => {
     return (transactions || [])
       .filter((item) => item.type === selectedType)
       .filter((item) => new Date(item.transactionDate) >= rangeStart);
   }, [transactions, rangeStart, selectedType]);
+
+  const activeDayCount = useMemo(() => {
+    const daySet = new Set(typeRows.map((item) => dayKey(item.transactionDate)).filter(Boolean));
+    return Math.max(1, daySet.size);
+  }, [typeRows]);
 
   const categoryData = useMemo(() => {
     const map = new Map();
@@ -437,7 +442,7 @@ export default function ReportPage() {
   }, [summaryItems]);
 
   const topCategory = summaryItems[0] || null;
-  const avgPerDay = totalSpent ? totalSpent / rangeDays : 0;
+  const avgPerDay = totalSpent ? totalSpent / activeDayCount : 0;
 
   const summaryPoints = useMemo(
     () => buildSummaryPoints(totalSpent, topCategory, avgPerDay, typeRows.length, typeLabels),
@@ -452,6 +457,39 @@ export default function ReportPage() {
       .join("; ");
     return `Period: ${rangeLabel}. ${typeLabels.totalLabel}: ${formatCurrency(totalSpent, "RM")}. ${typeLabels.topCategoryLabel}: ${topList}.`;
   }, [summaryItems, totalSpent, rangeLabel, typeLabels]);
+
+  const todayContext = useMemo(() => {
+    const now = new Date();
+    const todayRows = (transactions || []).filter((item) => {
+      if (item.type !== selectedType) return false;
+      const txn = new Date(item.transactionDate);
+      return (
+        txn.getFullYear() === now.getFullYear() &&
+        txn.getMonth() === now.getMonth() &&
+        txn.getDate() === now.getDate()
+      );
+    });
+
+    if (!todayRows.length) {
+      return "Today context: no transactions recorded today yet.";
+    }
+
+    const totalToday = todayRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const categoryTotals = new Map();
+    for (const row of todayRows) {
+      const categoryName = row.category?.name
+        ? getLocalizedCategoryLabel(row.category.name, language)
+        : t?.pages?.reportUncategorized || "Uncategorized";
+      categoryTotals.set(categoryName, (categoryTotals.get(categoryName) || 0) + Number(row.amount || 0));
+    }
+
+    const breakdown = Array.from(categoryTotals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, amount]) => `${name}: ${formatCurrency(amount, "RM")}`)
+      .join("; ");
+
+    return `Today context (${selectedType}): total ${formatCurrency(totalToday, "RM")}; categories: ${breakdown}`;
+  }, [transactions, selectedType, language, t]);
 
   useEffect(() => {
     if (!totalSpent) {
@@ -500,7 +538,7 @@ export default function ReportPage() {
         {
           persona: personaPrompt,
           intent: "financial_q",
-          question: `${questionInput.trim()} Context: ${reportContext}`.trim(),
+          question: `${questionInput.trim()} ${todayContext}`.trim(),
         },
         language
       );
@@ -733,7 +771,6 @@ export default function ReportPage() {
     </main>
   );
 }
-
 
 
 

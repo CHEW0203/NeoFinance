@@ -43,29 +43,40 @@ export default function ChangePersonalityPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!input.trim()) return;
+    const persona = input.trim();
+    if (!persona) return;
     setError("");
     setIsLoading(true);
+
+    // Always persist personality first so user flow is never blocked by AI network/API issues.
+    window.localStorage.setItem(PERSONA_KEY, persona);
 
     try {
       const text = await fetchPersonaMessage(
         {
-          persona: input.trim(),
+          persona,
           intent: "ask_target",
         },
         language
       );
-      window.localStorage.setItem(PERSONA_KEY, input.trim());
-      window.localStorage.setItem(PERSONA_REPLY_KEY, text);
-      router.push("/target");
+      window.localStorage.setItem(
+        PERSONA_REPLY_KEY,
+        text || targetCopy.defaultReply || "(._.) How much do you want to spend today?"
+      );
     } catch (err) {
       const friendly = getFriendlyErrorMessage(err, t);
-      setError(targetErrors.updatePersonalityFailed || "Failed to update personality.");
-      if (friendly) {
-        window.localStorage.setItem(PERSONA_REPLY_KEY, friendly);
-      }
+      window.localStorage.setItem(
+        PERSONA_REPLY_KEY,
+        friendly || targetCopy.defaultReply || "(._.) How much do you want to spend today?"
+      );
+      // Keep as warning only; personality is already saved.
+      setError(
+        targetErrors.updatePersonalityFallback ||
+          "Personality saved. AI reply is temporarily unavailable, please try again later."
+      );
     } finally {
       setIsLoading(false);
+      router.push("/target");
     }
   }
 
@@ -73,7 +84,7 @@ export default function ChangePersonalityPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col">
         <div className="flex items-center justify-between">
-          <BackButton fallbackHref="/target" />
+          <BackButton fallbackHref="/target" preferFallback />
           <div />
         </div>
 

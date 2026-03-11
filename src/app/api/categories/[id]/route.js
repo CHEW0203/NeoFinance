@@ -4,9 +4,6 @@ import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
 
 const PROTECTED_EXPENSE_NAMES = new Set([
-  "breakfast",
-  "lunch",
-  "dinner",
   "snack",
   "drinks",
   "food",

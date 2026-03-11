@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
 import { useTransactions } from "@/hooks/use-transactions";
+import { getLocalDateKey } from "@/utils/date-key";
 import { formatCurrency } from "@/utils/format";
 
 const PERSONA_KEY = "ft_persona_prompt";
@@ -16,10 +17,6 @@ const NOTIFICATIONS_KEY = "ft_notifications";
 const NOTIFICATIONS_VERSION_KEY = "ft_notifications_version";
 const NOTIFICATIONS_VERSION = "v5";
 const TIMEOUT_ERROR_CODE = "REQUEST_TIMEOUT";
-
-function todayKey(date = new Date()) {
-  return date.toISOString().slice(0, 10);
-}
 
 function safeParse(value, fallback) {
   if (!value) return fallback;
@@ -198,7 +195,7 @@ export default function TargetPage() {
   }, []);
 
   const today = useMemo(() => new Date(), []);
-  const todayKeyValue = todayKey(today);
+  const todayKeyValue = getLocalDateKey(today);
 
   const spentToday = useMemo(() => {
     if (!transactions || transactions.length === 0) return 0;
@@ -466,6 +463,7 @@ export default function TargetPage() {
     setTargetDate(todayKeyValue);
     window.localStorage.setItem(TARGET_KEY, String(numeric));
     window.localStorage.setItem(TARGET_DATE_KEY, todayKeyValue);
+    window.dispatchEvent(new Event("neo:target-updated"));
     setTargetInput("");
     setPendingTarget(null);
 
@@ -498,7 +496,11 @@ export default function TargetPage() {
 
   async function handleQuestionSubmit(event) {
     event.preventDefault();
-    if (!questionInput.trim() || !personaPrompt) return;
+    if (!personaPrompt) {
+      setError(targetErrors.personalityRequired || "Please set your personality first.");
+      return;
+    }
+    if (!questionInput.trim()) return;
     setError("");
     setIsQuestionLoading(true);
     setIsReplying(true);
@@ -545,11 +547,11 @@ export default function TargetPage() {
       window.localStorage.removeItem(TARGET_KEY);
       window.localStorage.removeItem(TARGET_DATE_KEY);
       window.localStorage.removeItem(NOTIFY_STATE_KEY);
+      window.dispatchEvent(new Event("neo:target-updated"));
     }
     updatePersonaReply(askTargetFallback);
   }
 
-  const showSetup = !personaPrompt;
   const ringColor = isOverBudget ? "#ef4444" : "#22c55e";
   const ringProgress = isOverBudget ? 1 : progressRemaining;
   const remainingDisplay =
@@ -570,27 +572,23 @@ export default function TargetPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col pb-28">
         <div className="flex items-center justify-between">
-          <BackButton fallbackHref="/" />
-          {!showSetup ? (
-            <Link
-              href="/target/change"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-transparent px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
-            >
-              {targetCopy.changePersonality || "Change Personality"}
-            </Link>
-          ) : (
-            <div />
-          )}
+          <BackButton fallbackHref="/" preferFallback />
+          <Link
+            href="/target/change"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-transparent px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
+          >
+            {personaPrompt
+              ? targetCopy.changePersonality || "Change Personality"
+              : targetCopy.setPersonality || "Set Personality"}
+          </Link>
         </div>
 
-        {showSetup ? (
-          <div className="flex flex-1 items-center justify-center">
-            <p className="max-w-md text-center text-base text-slate-400">
-              {targetCopy.setupPrompt || "What kind of person do you want to supervise you?"}
-            </p>
-          </div>
-        ) : (
-          <div className="mt-6 flex flex-1 flex-col gap-6">
+        <div className="mt-6 flex flex-1 flex-col gap-6">
+            {!personaPrompt ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                {targetCopy.setupPrompt || "Set your AI personality first, then it can guide your budget."}
+              </div>
+            ) : null}
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
               <p>{personaReply || askTargetFallback}</p>
               {isReplying ? (
@@ -703,36 +701,35 @@ export default function TargetPage() {
                 ) : null}
               </div>
             </div>
-          </div>
-        )}
+        </div>
       </div>
 
-      {showSetup ? null : (
-        <form
-          onSubmit={handleQuestionSubmit}
-          className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/90 px-4 py-3 backdrop-blur"
-        >
-          <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
-            <input
-              type="text"
-              value={questionInput}
-              onChange={(event) => setQuestionInput(event.target.value)}
-              placeholder={
-                targetCopy.questionPlaceholder || "If you have any financial questions, ask below."
-              }
-              className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none"
-              disabled={isQuestionLoading}
-            />
-            <button
-              type="submit"
-              disabled={isQuestionLoading || !questionInput.trim()}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {targetCopy.sendButton || "Send"}
-            </button>
-          </div>
-        </form>
-      )}
+      <form
+        onSubmit={handleQuestionSubmit}
+        className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/90 px-4 py-3 backdrop-blur"
+      >
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
+          <input
+            type="text"
+            value={questionInput}
+            onChange={(event) => setQuestionInput(event.target.value)}
+            placeholder={
+              personaPrompt
+                ? targetCopy.questionPlaceholder || "If you have any financial questions, ask below."
+                : targetCopy.setPersonalityFirst || "Set personality first to chat with AI."
+            }
+            className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none"
+            disabled={isQuestionLoading || !personaPrompt}
+          />
+          <button
+            type="submit"
+            disabled={isQuestionLoading || !questionInput.trim() || !personaPrompt}
+            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {targetCopy.sendButton || "Send"}
+          </button>
+        </div>
+      </form>
 
       {error ? (
         <div className="fixed bottom-20 left-1/2 w-full max-w-md -translate-x-1/2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
@@ -752,5 +749,3 @@ export default function TargetPage() {
     </main>
   );
 }
-
-

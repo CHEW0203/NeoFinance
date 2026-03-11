@@ -4,6 +4,7 @@ import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
 
 const VALID_TYPES = new Set(["income", "expense"]);
+const EXPENSE_CATEGORY_ALIAS_TO_FOOD = new Set(["breakfast", "lunch", "dinner"]);
 
 function toPositiveNumber(value) {
   const number = Number(value);
@@ -17,6 +18,13 @@ function isFutureDate(dateValue) {
   const endOfToday = new Date();
   endOfToday.setHours(23, 59, 59, 999);
   return dateValue > endOfToday;
+}
+
+function normalizeCategoryName(type, value) {
+  const name = String(value || "").trim();
+  if (!name) return name;
+  if (type !== "expense") return name;
+  return EXPENSE_CATEGORY_ALIAS_TO_FOOD.has(name.toLowerCase()) ? "Food" : name;
 }
 
 async function getAuthenticatedUserWithBaseData() {
@@ -371,6 +379,8 @@ export async function POST(request) {
       return NextResponse.json({ message: "`transactionDate` cannot be in the future." }, { status: 400 });
     }
 
+    categoryName = categoryName ? normalizeCategoryName(type, categoryName) : categoryName;
+
     const account = user.accounts.find((item) => item.id === body.accountId) || user.accounts[0];
     if (!account) {
       return NextResponse.json({ message: "No account found for that user." }, { status: 400 });
@@ -389,7 +399,7 @@ export async function POST(request) {
           bodyCategoryId = aiResult.id;
           console.log(`[AI System] Successfully matched existing Category ID: ${bodyCategoryId}`);
         } else if (aiResult.type === "new" && aiResult.name && aiResult.icon) {
-          categoryName = aiResult.name;
+          categoryName = normalizeCategoryName(type, aiResult.name);
           categoryIcon = aiResult.icon;
           console.log(`[AI System] Successfully generated new Category: ${categoryName} ${categoryIcon}`);
         }
@@ -468,7 +478,6 @@ export async function POST(request) {
     );
   }
 }
-
 
 
 

@@ -4,12 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
+import { getLocalDateKey } from "@/utils/date-key";
 
 const ICONS = {
   FOOD: "\u{1F354}",
-  BREAKFAST: "\u{1F373}",
-  LUNCH: "\u{1F35C}",
-  DINNER: "\u{1F37D}\uFE0F",
   SNACK: "\u{1F36A}",
   DRINKS: "\u{1F964}",
   TRANSPORT: "\u{1F68C}",
@@ -40,9 +38,6 @@ const ICONS = {
 
 const BASE_EXPENSE_CATEGORIES = [
   { key: "food", name: "Food", icon: ICONS.FOOD },
-  { key: "breakfast", name: "Breakfast", icon: ICONS.BREAKFAST },
-  { key: "lunch", name: "Lunch", icon: ICONS.LUNCH },
-  { key: "dinner", name: "Dinner", icon: ICONS.DINNER },
   { key: "snack", name: "Snack", icon: ICONS.SNACK },
   { key: "drinks", name: "Drinks", icon: ICONS.DRINKS },
   { key: "transport", name: "Transport", icon: ICONS.TRANSPORT },
@@ -73,9 +68,6 @@ const PROTECTED_INCOME_NAMES = new Set(
 
 const EXPENSE_ICON_CHOICES = [
   ICONS.FOOD,
-  ICONS.BREAKFAST,
-  ICONS.LUNCH,
-  ICONS.DINNER,
   ICONS.SNACK,
   ICONS.DRINKS,
   ICONS.PIZZA,
@@ -110,9 +102,6 @@ const INCOME_ICON_CHOICES = [
 const LOCALIZED_BASE_LABELS = {
   en: {
     food: "Food",
-    breakfast: "Breakfast",
-    lunch: "Lunch",
-    dinner: "Dinner",
     snack: "Snack",
     drinks: "Drinks",
     transport: "Transport",
@@ -131,9 +120,6 @@ const LOCALIZED_BASE_LABELS = {
   },
   zh: {
     food: "\u98df\u7269",
-    breakfast: "\u65e9\u9910",
-    lunch: "\u5348\u9910",
-    dinner: "\u665a\u9910",
     snack: "\u96f6\u98df",
     drinks: "\u996e\u6599",
     transport: "\u4ea4\u901a",
@@ -152,9 +138,6 @@ const LOCALIZED_BASE_LABELS = {
   },
   ms: {
     food: "Makanan",
-    breakfast: "Sarapan",
-    lunch: "Makan Tengah Hari",
-    dinner: "Makan Malam",
     snack: "Snek",
     drinks: "Minuman",
     transport: "Pengangkutan",
@@ -172,6 +155,8 @@ const LOCALIZED_BASE_LABELS = {
     refund: "Pulangan",
   },
 };
+
+const LEGACY_HIDDEN_EXPENSE_NAMES = new Set(["breakfast", "lunch", "dinner"]);
 
 function parseApiError(error, fallback) {
   return error?.message || fallback;
@@ -214,11 +199,15 @@ function buildCategoryRows(rawRows) {
 
   for (const row of rawRows) {
     const safeType = row.type === "income" ? "income" : "expense";
+    const rowName = String(row.name || "").trim();
+    if (safeType === "expense" && LEGACY_HIDDEN_EXPENSE_NAMES.has(normalizeName(rowName))) {
+      continue;
+    }
     const baseCatalog = getBaseForType(safeType);
-    const match = baseCatalog.find((base) => normalizeName(base.name) === normalizeName(row.name));
+    const match = baseCatalog.find((base) => normalizeName(base.name) === normalizeName(rowName));
     const item = {
       ...row,
-      name: String(row.name || "").trim(),
+      name: rowName,
       type: safeType,
       icon: sanitizeIcon(row.icon) || match?.icon || ICONS.BOX,
       baseKey: match?.key || null,
@@ -267,7 +256,7 @@ export function TransactionScreen({ recordId }) {
   const [mode, setMode] = useState("expense");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
-  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [transactionDate, setTransactionDate] = useState(getLocalDateKey(new Date()));
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [categories, setCategories] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -282,7 +271,7 @@ export function TransactionScreen({ recordId }) {
   const [showDeleteCategoryConfirm, setShowDeleteCategoryConfirm] = useState(false);
 
   const isEditing = Boolean(recordId);
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayDate = getLocalDateKey(new Date());
 
   const filteredCategories = useMemo(
     () => categories.filter((item) => item.type === mode),
@@ -320,7 +309,7 @@ export function TransactionScreen({ recordId }) {
     setMode(row.type === "income" ? "income" : "expense");
     setTitle(row.title || "");
     setAmount(String(row.amount ?? ""));
-    setTransactionDate(new Date(row.transactionDate).toISOString().slice(0, 10));
+    setTransactionDate(getLocalDateKey(new Date(row.transactionDate)));
     setSelectedCategoryId(row.categoryId || "");
   }
 
@@ -423,6 +412,7 @@ export function TransactionScreen({ recordId }) {
       }
       setSuccess(isEditing ? t.transactions.recordUpdated : t.transactions.recordAdded);
       if (!isEditing) setAmount("");
+      window.dispatchEvent(new Event("neo:transactions-updated"));
       router.push("/");
       router.refresh();
     } catch (requestError) {
@@ -443,6 +433,7 @@ export function TransactionScreen({ recordId }) {
         throw new Error(result.message || t.transactions.deleteFailed);
       }
       setShowDeleteConfirm(false);
+      window.dispatchEvent(new Event("neo:transactions-updated"));
       router.push("/");
       router.refresh();
     } catch (requestError) {

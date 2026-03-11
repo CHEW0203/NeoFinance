@@ -4,6 +4,7 @@ import {
   deleteTransaction,
   fetchTransactions,
 } from "@/services/transaction-api";
+import { getLocalDateKey } from "@/utils/date-key";
 import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_NAME } from "@/lib/i18n/config";
 import { getDictionary, normalizeLanguage } from "@/lib/i18n";
 
@@ -24,10 +25,6 @@ const INITIAL_FORM = {
   note: "",
   transactionDate: "",
 };
-
-function todayKey(date = new Date()) {
-  return date.toISOString().slice(0, 10);
-}
 
 function parseDateKey(key) {
   if (!key) return null;
@@ -129,7 +126,7 @@ async function checkTargetNotifications(rows) {
   };
 
   const today = new Date();
-  const todayKeyValue = todayKey(today);
+  const todayKeyValue = getLocalDateKey(today);
 
   const spentToday = rows.reduce((sum, item) => {
     if (item.type !== "expense") return sum;
@@ -266,13 +263,13 @@ async function checkStreakNotifications(rows) {
   };
 
   const today = new Date();
-  const todayKeyValue = todayKey(today);
+  const todayKeyValue = getLocalDateKey(today);
   const todayDate = parseDateKey(todayKeyValue);
   if (!todayDate) return;
   const yesterdayDate = addUtcDays(todayDate, -1);
-  const yesterdayKeyValue = todayKey(yesterdayDate);
+  const yesterdayKeyValue = getLocalDateKey(yesterdayDate);
 
-  const recordDays = new Set(rows.map((record) => todayKey(new Date(record.transactionDate))));
+  const recordDays = new Set(rows.map((record) => getLocalDateKey(new Date(record.transactionDate))));
 
   const storedState = safeParse(window.localStorage.getItem(STREAK_STATE_KEY), {
     lastChecked: "",
@@ -310,7 +307,7 @@ async function checkStreakNotifications(rows) {
   const results = [];
 
   while (cursor.getTime() <= end.getTime()) {
-    const key = todayKey(cursor);
+    const key = getLocalDateKey(cursor);
     const success = recordDays.has(key);
     if (success) {
       streak += 1;
@@ -474,8 +471,6 @@ export function useTransactions() {
     removeTransaction,
   };
 }
-
-
 
 
 

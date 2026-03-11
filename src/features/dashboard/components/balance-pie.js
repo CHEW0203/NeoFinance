@@ -9,6 +9,7 @@ export function BalancePie({
   labels = {},
   expenseHref = "/report?type=expense",
   incomeHref = "/report?type=income",
+  budgetBar = null,
 }) {
   const balance = totalBalance;
   const expense = Math.max(monthlyExpense, 0);
@@ -62,6 +63,7 @@ export function BalancePie({
           </div>
         </div>
       </div>
+      {budgetBar ? <div className="mt-4">{budgetBar}</div> : null}
     </section>
   );
 }
