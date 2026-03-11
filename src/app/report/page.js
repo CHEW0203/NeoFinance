@@ -1,10 +1,12 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
 import { useTransactions } from "@/hooks/use-transactions";
 import { pickCategoryColor } from "@/lib/category-colors";
+import { getLocalizedCategoryLabel } from "@/lib/i18n/category-labels";
 import { formatCurrency } from "@/utils/format";
 
 const PERSONA_KEY = "ft_persona_prompt";
@@ -236,21 +238,17 @@ function describeArc(centerX, centerY, radius, startAngle, endAngle) {
   ].join(" ");
 }
 
-function buildSummaryPoints(totalSpent, topCategory, avgPerDay, transactionCount, t) {
+function buildSummaryPoints(totalSpent, topCategory, avgPerDay, transactionCount, labels) {
   if (!totalSpent) return [];
   const points = [];
-  points.push(`${t?.pages?.reportTotal || "Total spent"}: ${formatCurrency(totalSpent, "RM")}`);
+  points.push(`${labels.totalLabel}: ${formatCurrency(totalSpent, "RM")}`);
   if (topCategory) {
     points.push(
-      `${t?.pages?.reportTopCategory || "Top category"}: ${topCategory.name} (${topCategory.percent.toFixed(0)}%)`
+      `${labels.topCategoryLabel}: ${topCategory.name} (${topCategory.percent.toFixed(0)}%)`
     );
   }
-  points.push(
-    `${t?.pages?.reportAvgDaily || "Avg per day"}: ${formatCurrency(avgPerDay, "RM")}`
-  );
-  points.push(
-    `${t?.pages?.reportTransactionCount || "Transactions"}: ${transactionCount}`
-  );
+  points.push(`${labels.avgLabel}: ${formatCurrency(avgPerDay, "RM")}`);
+  points.push(`${labels.countLabel}: ${transactionCount}`);
   return points;
 }
 
@@ -285,8 +283,13 @@ async function fetchPersonaMessage(payload, language) {
 }
 
 export default function ReportPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { language, t } = useLanguage();
   const { transactions, isLoading, error } = useTransactions();
+  const selectedType = searchParams.get("type") === "income" ? "income" : "expense";
+  const isIncome = selectedType === "income";
   const [range, setRange] = useState("month");
   const [personaPrompt, setPersonaPrompt] = useState("");
   const [summaryAdvice, setSummaryAdvice] = useState("");
@@ -306,6 +309,29 @@ export default function ReportPage() {
     if (range === "half") return t?.pages?.month6 || "6 Months";
     return t?.pages?.year1 || "1 Year";
   }, [range, t]);
+
+  const typeLabels = useMemo(() => {
+    if (isIncome) {
+      return {
+        summaryTitle: t?.pages?.reportIncomeSummaryTitle || "Income Summary",
+        detailsTitle: t?.pages?.reportIncomeDetailsTitle || "Income Breakdown",
+        totalLabel: t?.pages?.reportIncomeTotal || "Total income",
+        topCategoryLabel: t?.pages?.reportIncomeTopCategory || "Top source",
+        avgLabel: t?.pages?.reportAvgDaily || "Avg per day",
+        countLabel: t?.pages?.reportTransactionCount || "Transactions",
+        noData: t?.pages?.reportIncomeNoData || "No income found for this period.",
+      };
+    }
+    return {
+      summaryTitle: t?.pages?.reportSummaryTitle || "Spending Summary",
+      detailsTitle: t?.pages?.reportDetailsTitle || "Category Breakdown",
+      totalLabel: t?.pages?.reportTotal || "Total spent",
+      topCategoryLabel: t?.pages?.reportTopCategory || "Top category",
+      avgLabel: t?.pages?.reportAvgDaily || "Avg per day",
+      countLabel: t?.pages?.reportTransactionCount || "Transactions",
+      noData: t?.pages?.reportNoData || "No expenses found for this period.",
+    };
+  }, [isIncome, t]);
 
   const rangeStart = useMemo(() => {
     const now = new Date();
@@ -330,21 +356,23 @@ export default function ReportPage() {
     return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [rangeStart]);
 
-  const expenseRows = useMemo(() => {
+  const typeRows = useMemo(() => {
     return (transactions || [])
-      .filter((item) => item.type === "expense")
+      .filter((item) => item.type === selectedType)
       .filter((item) => new Date(item.transactionDate) >= rangeStart);
-  }, [transactions, rangeStart]);
+  }, [transactions, rangeStart, selectedType]);
 
   const categoryData = useMemo(() => {
     const map = new Map();
-    expenseRows.forEach((item) => {
+    typeRows.forEach((item) => {
       const category = item.category || {};
       const id = category.id || `uncat-${item.id}`;
       if (!map.has(id)) {
         map.set(id, {
           id,
-          name: category.name || t?.pages?.reportUncategorized || "Uncategorized",
+          name: category.name
+            ? getLocalizedCategoryLabel(category.name, language)
+            : t?.pages?.reportUncategorized || "Uncategorized",
           color: category.color || "",
           total: 0,
           items: [],
@@ -370,7 +398,7 @@ export default function ReportPage() {
         ),
       };
     });
-  }, [expenseRows, t]);
+  }, [typeRows, t, language]);
 
   const totalSpent = useMemo(() => {
     return categoryData.reduce((sum, item) => sum + item.total, 0);
@@ -412,8 +440,8 @@ export default function ReportPage() {
   const avgPerDay = totalSpent ? totalSpent / rangeDays : 0;
 
   const summaryPoints = useMemo(
-    () => buildSummaryPoints(totalSpent, topCategory, avgPerDay, expenseRows.length, t),
-    [totalSpent, topCategory, avgPerDay, expenseRows.length, t]
+    () => buildSummaryPoints(totalSpent, topCategory, avgPerDay, typeRows.length, typeLabels),
+    [totalSpent, topCategory, avgPerDay, typeRows.length, typeLabels]
   );
 
   const reportContext = useMemo(() => {
@@ -422,12 +450,12 @@ export default function ReportPage() {
       .slice(0, 4)
       .map((item) => `${item.name}: ${formatCurrency(item.total, "RM")} (${item.percent.toFixed(0)}%)`)
       .join("; ");
-    return `Period: ${rangeLabel}. Total: ${formatCurrency(totalSpent, "RM")}. Top categories: ${topList}.`; 
-  }, [summaryItems, totalSpent, rangeLabel]);
+    return `Period: ${rangeLabel}. ${typeLabels.totalLabel}: ${formatCurrency(totalSpent, "RM")}. ${typeLabels.topCategoryLabel}: ${topList}.`;
+  }, [summaryItems, totalSpent, rangeLabel, typeLabels]);
 
   useEffect(() => {
     if (!totalSpent) {
-      setSummaryAdvice(t?.pages?.reportNoData || "No expenses found for this period.");
+      setSummaryAdvice(typeLabels.noData);
       return;
     }
     if (!personaPrompt) {
@@ -453,7 +481,13 @@ export default function ReportPage() {
       .finally(() => {
         setIsSummaryLoading(false);
       });
-  }, [personaPrompt, reportContext, language, totalSpent, t]);
+  }, [personaPrompt, reportContext, language, totalSpent, t, typeLabels]);
+
+  function switchType(nextType) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("type", nextType);
+    router.push(`${pathname}?${params.toString()}`);
+  }
 
   async function handleQuestionSubmit(event) {
     event.preventDefault();
@@ -482,7 +516,7 @@ export default function ReportPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto w-full max-w-5xl space-y-6 pb-24">
-        <BackButton fallbackHref="/" />
+        <BackButton fallbackHref="/" preferFallback />
 
         <section className="rounded-3xl border border-slate-300 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -490,7 +524,29 @@ export default function ReportPage() {
               <h1 className="text-2xl font-semibold text-slate-900">{t?.pages?.report || "Report"}</h1>
               <p className="mt-1 text-sm text-slate-500">{t?.pages?.reportDesc || ""}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => switchType("expense")}
+                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  !isIncome
+                    ? "border-amber-500 bg-amber-100 text-amber-900"
+                    : "border-slate-300 text-slate-700"
+                }`}
+              >
+                {t?.transactions?.expense || "Expense"}
+              </button>
+              <button
+                type="button"
+                onClick={() => switchType("income")}
+                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  isIncome
+                    ? "border-cyan-500 bg-cyan-100 text-cyan-900"
+                    : "border-slate-300 text-slate-700"
+                }`}
+              >
+                {t?.transactions?.income || "Income"}
+              </button>
               <button
                 type="button"
                 onClick={() => setRange("month")}
@@ -530,13 +586,11 @@ export default function ReportPage() {
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">{t?.pages?.reportSummaryTitle || "Spending Summary"}</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{typeLabels.summaryTitle}</h2>
             {isLoading ? (
               <p className="mt-4 text-sm text-slate-400">{t?.pages?.reportLoading || "Loading report..."}</p>
             ) : summaryItems.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">
-                {t?.pages?.reportNoData || "No expenses found for this period."}
-              </p>
+              <p className="mt-4 text-sm text-slate-500">{typeLabels.noData}</p>
             ) : (
               <div className="mt-5 flex flex-col gap-6">
                 <div className="flex flex-col items-center gap-4 sm:flex-row">
@@ -591,13 +645,11 @@ export default function ReportPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">{t?.pages?.reportDetailsTitle || "Category Breakdown"}</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{typeLabels.detailsTitle}</h2>
             {isLoading ? (
               <p className="mt-4 text-sm text-slate-400">{t?.pages?.reportLoading || "Loading report..."}</p>
             ) : summaryItems.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">
-                {t?.pages?.reportNoData || "No expenses found for this period."}
-              </p>
+              <p className="mt-4 text-sm text-slate-500">{typeLabels.noData}</p>
             ) : (
               <div className="mt-4 space-y-4">
                 {summaryItems.map((category) => (
@@ -662,7 +714,9 @@ export default function ReportPage() {
             value={questionInput}
             onChange={(event) => setQuestionInput(event.target.value)}
             placeholder={
-              t?.pages?.reportAskPlaceholder || "Ask the AI about your spending..."
+              isIncome
+                ? t?.pages?.reportIncomeAskPlaceholder || "Ask the AI about your income..."
+                : t?.pages?.reportAskPlaceholder || "Ask the AI about your spending..."
             }
             className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none"
             disabled={isQuestionLoading}

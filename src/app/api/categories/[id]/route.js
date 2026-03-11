@@ -1,7 +1,33 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
+
+const PROTECTED_EXPENSE_NAMES = new Set([
+  "breakfast",
+  "lunch",
+  "dinner",
+  "snack",
+  "drinks",
+  "food",
+  "transport",
+  "shopping",
+  "gift",
+  "rent",
+  "utilities",
+  "health",
+  "others",
+]);
+
+const PROTECTED_INCOME_NAMES = new Set([
+  "salary",
+  "allowance",
+  "bonus",
+  "freelance",
+  "investment",
+  "refund",
+  "others",
+]);
 
 async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {
   let fallback = await tx.category.findFirst({
@@ -25,7 +51,7 @@ async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {
       data: {
         name: "Others",
         type,
-        icon: "ðŸ“¦",
+        icon: "\u{1F4E6}",
         color,
         userId,
       },
@@ -51,10 +77,17 @@ export async function DELETE(_request, context) {
 
     const category = await prisma.category.findFirst({
       where: { id: categoryId, userId: user.id },
-      select: { id: true, type: true },
+      select: { id: true, type: true, name: true },
     });
     if (!category) {
       return NextResponse.json({ message: "Category not found." }, { status: 404 });
+    }
+
+    const normalizedName = String(category.name || "").trim().toLowerCase();
+    const protectedSet =
+      category.type === "income" ? PROTECTED_INCOME_NAMES : PROTECTED_EXPENSE_NAMES;
+    if (protectedSet.has(normalizedName)) {
+      return NextResponse.json({ message: "Basic category cannot be deleted." }, { status: 400 });
     }
 
     await prisma.$transaction(async (tx) => {
@@ -88,8 +121,3 @@ export async function DELETE(_request, context) {
     );
   }
 }
-
-
-
-
-

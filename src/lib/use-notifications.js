@@ -1,45 +1,41 @@
-﻿"use client";
+"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 const STORAGE_KEY = "ft_notifications";
 const STORAGE_VERSION_KEY = "ft_notifications_version";
 const STORAGE_VERSION = "v5";
-
 const DEFAULT_NOTIFICATIONS = [];
 
 function safeParse(value) {
   if (!value) return null;
   try {
     return JSON.parse(value);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
 
-export function useNotifications() {
-  const [notifications, setNotifications] = useState([]);
-  const [ready, setReady] = useState(false);
+function getInitialNotifications() {
+  if (typeof window === "undefined") return [];
+  const stored = safeParse(window.localStorage.getItem(STORAGE_KEY));
+  const storedVersion = window.localStorage.getItem(STORAGE_VERSION_KEY);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = safeParse(window.localStorage.getItem(STORAGE_KEY));
-    const storedVersion = window.localStorage.getItem(STORAGE_VERSION_KEY);
-
-    if (Array.isArray(stored)) {
-      setNotifications(stored);
-      if (storedVersion !== STORAGE_VERSION) {
-        window.localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
-      }
-      setReady(true);
-      return;
+  if (Array.isArray(stored)) {
+    if (storedVersion !== STORAGE_VERSION) {
+      window.localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
     }
+    return stored;
+  }
 
-    setNotifications(DEFAULT_NOTIFICATIONS);
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_NOTIFICATIONS));
-    window.localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
-    setReady(true);
-  }, []);
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_NOTIFICATIONS));
+  window.localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
+  return DEFAULT_NOTIFICATIONS;
+}
+
+export function useNotifications() {
+  const [notifications, setNotifications] = useState(getInitialNotifications);
+  const ready = true;
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.isRead).length,

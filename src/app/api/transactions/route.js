@@ -39,8 +39,37 @@ async function getAuthenticatedUserWithBaseData() {
 }
 
 // Allowed icons for AI to choose from when creating a new category
-const EXPENSE_ICONS = ["ðŸœ", "â˜•", "ðŸ”", "ðŸ•", "ðŸ›ï¸", "ðŸŽ", "ðŸšŒ", "ðŸŽ®", "ðŸŽµ", "ðŸ ", "ðŸ“±", "ðŸ§¾"];
-const INCOME_ICONS = ["ðŸ’¼", "ðŸ’°", "ðŸ’¸", "ðŸ¦", "ðŸ“ˆ", "ðŸª™", "ðŸ’³", "ðŸ§ ", "ðŸŽ¯", "ðŸ§¾", "ðŸ› ï¸", "ðŸ†", "ðŸŽ“", "ðŸ‘”", "ðŸ“Š"];
+const EXPENSE_ICONS = [
+  "\u{1F35C}",
+  "\u2615",
+  "\u{1F354}",
+  "\u{1F355}",
+  "\u{1F6CD}\uFE0F",
+  "\u{1F381}",
+  "\u{1F68C}",
+  "\u{1F3AE}",
+  "\u{1F3B5}",
+  "\u{1F3E0}",
+  "\u{1F4F1}",
+  "\u{1F9FE}",
+];
+const INCOME_ICONS = [
+  "\u{1F4BC}",
+  "\u{1F4B0}",
+  "\u{1F4B8}",
+  "\u{1F3E6}",
+  "\u{1F4C8}",
+  "\u{1FA99}",
+  "\u{1F4B3}",
+  "\u{1F9E0}",
+  "\u{1F3AF}",
+  "\u{1F9FE}",
+  "\u{1F6E0}\uFE0F",
+  "\u{1F3C6}",
+  "\u{1F393}",
+  "\u{1F454}",
+  "\u{1F4CA}",
+];
 
 // ==========================================
 // AI Helper: Gemini 2.5 Flash Auto-Categorization

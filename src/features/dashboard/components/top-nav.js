@@ -239,13 +239,6 @@ export function TopNav({ monthLabel, currentUser }) {
                     >
                       {t.menu.notification}
                     </Link>
-                    <Link
-                      href="/transactions"
-                      onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
-                    >
-                      {t.menu.transactions}
-                    </Link>
                   </>
                 ) : (
                   <>

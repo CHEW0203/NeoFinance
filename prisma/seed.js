@@ -8,9 +8,7 @@ async function main() {
     where: { username: "demo_user" },
   });
 
-  if (existingUser) {
-    return;
-  }
+  if (existingUser) return;
 
   const passwordHash = await bcrypt.hash("demo12345", 12);
 
@@ -31,11 +29,14 @@ async function main() {
       },
       categories: {
         create: [
-          { name: "Salary", type: "income", color: "#0f766e", icon: "💼" },
-          { name: "Food", type: "expense", color: "#b45309", icon: "🍜" },
-          { name: "Transport", type: "expense", color: "#334155", icon: "🚌" },
-          { name: "Gift", type: "expense", color: "#be185d", icon: "🎁" },
-          { name: "Others", type: "expense", color: "#475569", icon: "📦" },
+          { name: "Salary", type: "income", color: "#0f766e", icon: "\u{1F4BC}" },
+          { name: "Food", type: "expense", color: "#b45309", icon: "\u{1F354}" },
+          { name: "Breakfast", type: "expense", color: "#b45309", icon: "\u{1F373}" },
+          { name: "Lunch", type: "expense", color: "#c2410c", icon: "\u{1F35C}" },
+          { name: "Dinner", type: "expense", color: "#92400e", icon: "\u{1F37D}\uFE0F" },
+          { name: "Transport", type: "expense", color: "#334155", icon: "\u{1F68C}" },
+          { name: "Gift", type: "expense", color: "#be185d", icon: "\u{1F381}" },
+          { name: "Others", type: "expense", color: "#475569", icon: "\u{1F4E6}" },
         ],
       },
     },
@@ -47,10 +48,8 @@ async function main() {
 
   const account = user.accounts[0];
   const salaryCategory = user.categories.find((category) => category.name === "Salary");
-  const foodCategory = user.categories.find((category) => category.name === "Food");
-  const transportCategory = user.categories.find(
-    (category) => category.name === "Transport"
-  );
+  const lunchCategory = user.categories.find((category) => category.name === "Lunch");
+  const transportCategory = user.categories.find((category) => category.name === "Transport");
 
   await prisma.transaction.createMany({
     data: [
@@ -64,17 +63,17 @@ async function main() {
         categoryId: salaryCategory.id,
       },
       {
-        title: "Weekly groceries",
-        amount: 240,
+        title: "Lunch meal",
+        amount: 24,
         type: "expense",
         transactionDate: new Date("2026-03-03"),
         userId: user.id,
         accountId: account.id,
-        categoryId: foodCategory.id,
+        categoryId: lunchCategory.id,
       },
       {
         title: "Bus fare",
-        amount: 129,
+        amount: 12.9,
         type: "expense",
         transactionDate: new Date("2026-03-05"),
         userId: user.id,

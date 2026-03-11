@@ -18,13 +18,13 @@ export function LoginScreen({ nextPath = "/transactions" }) {
       <div className="mx-auto w-full max-w-2xl">
         <section className="rounded-[2rem] border border-white/70 bg-white/85 p-8 shadow-[0_28px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur">
           <BackButton fallbackHref="/" />
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-700">
+          <p className="text-lg font-semibold uppercase tracking-[0.28em] text-indigo-700">
             {t.auth.access}
           </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
             {t.auth.loginTitle}
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">{t.auth.loginDesc}</p>
+          <p className="mt-3 max-w-xl text-[13px] leading-6 text-slate-600">{t.auth.loginDesc}</p>
 
           <form className="mt-8 space-y-4" onSubmit={submit}>
             <input
@@ -34,7 +34,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, username: event.target.value }))
               }
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-indigo-500"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-[13px] outline-none focus:border-indigo-500"
               required
             />
             <div className="relative">
@@ -45,7 +45,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, password: event.target.value }))
                 }
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm outline-none focus:border-indigo-500"
+                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-[13px] outline-none focus:border-indigo-500"
                 required
               />
               <button
@@ -80,7 +80,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
               </button>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-600">
+            <label className="flex items-center gap-2 text-[13px] text-slate-600">
               <input
                 type="checkbox"
                 checked={form.rememberMe}
@@ -95,7 +95,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-2xl bg-indigo-600 px-4 py-3 text-[13px] font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting ? t.auth.signingIn : t.common.login}
             </button>
@@ -107,7 +107,7 @@ export function LoginScreen({ nextPath = "/transactions" }) {
             </p>
           ) : null}
 
-          <p className="mt-6 text-sm text-slate-600">
+          <p className="mt-6 text-[13px] text-slate-600">
             {t.auth.noAccount}{" "}
             <Link href="/register" className="font-semibold text-indigo-700">
               {t.auth.registerHere}
