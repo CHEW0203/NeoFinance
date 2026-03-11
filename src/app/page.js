@@ -117,7 +117,10 @@ export default async function Home() {
             currency={stats.currency === "MYR" ? "RM" : stats.currency}
             labels={t.dashboard}
             expenseHref="/report?type=expense"
-            incomeHref="/report?type=income"
+                      incomeHregit status
+                      git add .
+                  git commit -m "Restore stable NeoFinance codebase"
+git push origin main --force-with-leasegit statusf="/report?type=income"
           />
 
           <Link
