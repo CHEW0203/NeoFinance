@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
@@ -618,6 +619,16 @@ export function TransactionScreen({ recordId }) {
           >
             {isSaving ? t.transactions.saving : isEditing ? t.transactions.updateRecord : t.transactions.addRecord}
           </button>
+
+          {!isEditing && mode === "expense" ? (
+            <Link
+              href="/scan"
+              className="flex w-full items-center justify-between rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-900"
+            >
+              <span>{t.scan?.scanReceipt || t.pages?.scan || "Scan receipt"}</span>
+              <span className="text-xs text-slate-500">{t.pages?.scanDesc || "Scan and auto record"}</span>
+            </Link>
+          ) : null}
         </form>
 
         {error ? (
