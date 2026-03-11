@@ -110,3 +110,23 @@ a {
     transform: rotate(360deg);
   }
 }
+
+body[data-search-open="true"] .dashboard-main {
+  display: none;
+}
+
+.toast-bar {
+  animation: toast-slide-in 0.25s ease-out;
+}
+
+@keyframes toast-slide-in {
+  0% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+

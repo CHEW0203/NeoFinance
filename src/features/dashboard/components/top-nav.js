@@ -74,6 +74,17 @@ export function TopNav({ monthLabel, currentUser }) {
     };
   }, [searchQuery, searchOpen, currentUser]);
 
+    useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    if (searchOpen) {
+      document.body.setAttribute("data-search-open", "true");
+    } else {
+      document.body.removeAttribute("data-search-open");
+    }
+    return () => {
+      document.body.removeAttribute("data-search-open");
+    };
+  }, [searchOpen]);
   function closeSearch() {
     setSearchOpen(false);
     setSearchQuery("");
@@ -82,7 +93,7 @@ export function TopNav({ monthLabel, currentUser }) {
 
   return (
     <>
-      <nav className="grid grid-cols-[44px_1fr_80px] items-center rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <nav className="relative flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -91,8 +102,12 @@ export function TopNav({ monthLabel, currentUser }) {
         >
           {"\u2261"}
         </button>
-        <p className="text-lg font-semibold tracking-tight text-slate-900">{monthLabel}</p>
-        <div className="flex items-center justify-end gap-3 text-2xl text-slate-800">
+        {!searchOpen ? (
+        <p className="absolute left-1/2 -translate-x-1/2 text-lg font-semibold tracking-tight text-slate-900">
+          {monthLabel}
+        </p>
+      ) : null}
+        <div className="flex items-center gap-3 whitespace-nowrap text-2xl text-slate-800">
           <Link
             href="/notifications"
             aria-label={t.menu.notification}
@@ -119,7 +134,7 @@ export function TopNav({ monthLabel, currentUser }) {
       </nav>
 
       {searchOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/30 pt-20 sm:pt-24">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-white pt-20 sm:pt-24">
           <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-xl sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <input
@@ -309,3 +324,13 @@ export function TopNav({ monthLabel, currentUser }) {
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+

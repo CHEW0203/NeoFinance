@@ -4,6 +4,8 @@ import {
   deleteTransaction,
   fetchTransactions,
 } from "@/services/transaction-api";
+import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_NAME } from "@/lib/i18n/config";
+import { getDictionary, normalizeLanguage } from "@/lib/i18n";
 
 const TARGET_KEY = "ft_daily_target";
 const PERSONA_KEY = "ft_persona_prompt";
@@ -59,19 +61,29 @@ function appendNotification({ title, message }) {
   window.localStorage.setItem(NOTIFICATIONS_VERSION_KEY, NOTIFICATIONS_VERSION);
 }
 
-function getFriendlyErrorMessage(error) {
+function getFriendlyErrorMessage(error, t) {
   const message = String(error?.message || "").toLowerCase();
   if (message.includes("high demand") || message.includes("quota") || message.includes("rate")) {
-    return "(._.) Please wait a moment and try again.";
+    return t?.target?.fallback?.busy || "(._.) Please wait a moment and try again.";
   }
   return null;
 }
 
-async function fetchPersonaMessage(payload) {
+function readCookieLanguage() {
+  if (typeof document === "undefined") {
+    return DEFAULT_LANGUAGE;
+  }
+  const key = `${LANGUAGE_COOKIE_NAME}=`;
+  const found = document.cookie.split("; ").find((entry) => entry.startsWith(key));
+  if (!found) return DEFAULT_LANGUAGE;
+  return normalizeLanguage(found.slice(key.length));
+}
+
+async function fetchPersonaMessage(payload, language) {
   const response = await fetch("/api/personality", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, language }),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -89,6 +101,16 @@ async function checkTargetNotifications(rows) {
   if (!targetValue || Number.isNaN(targetValue)) return;
 
   const personaPrompt = window.localStorage.getItem(PERSONA_KEY) || "";
+  const language = readCookieLanguage();
+  const t = getDictionary(language);
+  const targetFallback = t?.target?.fallback || {};
+  const targetNotifications = t?.target?.notifications || {};
+  const notificationTitles = {
+    halfwayAlert: targetNotifications.halfwayAlert || "Halfway Alert",
+    targetReached: targetNotifications.targetReached || "Target Reached",
+    overBudget: targetNotifications.overBudget || "Over Budget",
+  };
+
   const today = new Date();
   const todayKeyValue = todayKey(today);
 
@@ -135,20 +157,23 @@ async function checkTargetNotifications(rows) {
 
     try {
       const text = personaPrompt
-        ? await fetchPersonaMessage({
-            persona: personaPrompt,
-            intent: "caution_half",
-            target: targetValue,
-            remaining,
-            spent: spentToday,
-          })
-        : "(._.) You are halfway there. Keep it under control.";
-      appendNotification({ title: "Halfway Alert", message: text });
+        ? await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent: "caution_half",
+              target: targetValue,
+              remaining,
+              spent: spentToday,
+            },
+            language
+          )
+        : targetFallback.cautionHalf || "(._.) You are halfway there. Keep it under control.";
+      appendNotification({ title: notificationTitles.halfwayAlert, message: text });
       if (text) window.localStorage.setItem(PERSONA_REPLY_KEY, text);
     } catch (err) {
-      const friendly = getFriendlyErrorMessage(err);
-      const fallback = friendly || "(._.) You are halfway there. Keep it under control.";
-      appendNotification({ title: "Halfway Alert", message: fallback });
+      const friendly = getFriendlyErrorMessage(err, t);
+      const fallback = friendly || targetFallback.cautionHalf || "(._.) You are halfway there. Keep it under control.";
+      appendNotification({ title: notificationTitles.halfwayAlert, message: fallback });
       window.localStorage.setItem(PERSONA_REPLY_KEY, fallback);
     }
   }
@@ -159,20 +184,23 @@ async function checkTargetNotifications(rows) {
 
     try {
       const text = personaPrompt
-        ? await fetchPersonaMessage({
-            persona: personaPrompt,
-            intent: "target_reached",
-            target: targetValue,
-            remaining,
-            spent: spentToday,
-          })
-        : "(._.) You have reached your target for today.";
-      appendNotification({ title: "Target Reached", message: text });
+        ? await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent: "target_reached",
+              target: targetValue,
+              remaining,
+              spent: spentToday,
+            },
+            language
+          )
+        : targetFallback.targetReached || "(._.) You have reached your target for today.";
+      appendNotification({ title: notificationTitles.targetReached, message: text });
       if (text) window.localStorage.setItem(PERSONA_REPLY_KEY, text);
     } catch (err) {
-      const friendly = getFriendlyErrorMessage(err);
-      const fallback = friendly || "(._.) You have reached your target for today.";
-      appendNotification({ title: "Target Reached", message: fallback });
+      const friendly = getFriendlyErrorMessage(err, t);
+      const fallback = friendly || targetFallback.targetReached || "(._.) You have reached your target for today.";
+      appendNotification({ title: notificationTitles.targetReached, message: fallback });
       window.localStorage.setItem(PERSONA_REPLY_KEY, fallback);
     }
   }
@@ -183,20 +211,23 @@ async function checkTargetNotifications(rows) {
 
     try {
       const text = personaPrompt
-        ? await fetchPersonaMessage({
-            persona: personaPrompt,
-            intent: "over_budget",
-            target: targetValue,
-            remaining,
-            spent: spentToday,
-          })
-        : "(>_<) You are over budget. Pause spending for now.";
-      appendNotification({ title: "Over Budget", message: text });
+        ? await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent: "over_budget",
+              target: targetValue,
+              remaining,
+              spent: spentToday,
+            },
+            language
+          )
+        : targetFallback.overBudget || "(>_<) You are over budget. Pause spending for now.";
+      appendNotification({ title: notificationTitles.overBudget, message: text });
       if (text) window.localStorage.setItem(PERSONA_REPLY_KEY, text);
     } catch (err) {
-      const friendly = getFriendlyErrorMessage(err);
-      const fallback = friendly || "(>_<) You are over budget. Pause spending for now.";
-      appendNotification({ title: "Over Budget", message: fallback });
+      const friendly = getFriendlyErrorMessage(err, t);
+      const fallback = friendly || targetFallback.overBudget || "(>_<) You are over budget. Pause spending for now.";
+      appendNotification({ title: notificationTitles.overBudget, message: fallback });
       window.localStorage.setItem(PERSONA_REPLY_KEY, fallback);
     }
   }
@@ -269,4 +300,3 @@ export function useTransactions() {
     removeTransaction,
   };
 }
-

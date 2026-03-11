@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BackButton } from "@/components/back-button";
+import { useLanguage } from "@/hooks/use-language";
 import { useTransactions } from "@/hooks/use-transactions";
 import { formatCurrency } from "@/utils/format";
 
@@ -10,12 +11,11 @@ const PERSONA_KEY = "ft_persona_prompt";
 const PERSONA_REPLY_KEY = "ft_persona_reply";
 const TARGET_KEY = "ft_daily_target";
 const TARGET_DATE_KEY = "ft_daily_target_date";
-const TARGET_RESET_VERSION_KEY = "ft_target_reset_version";
-const TARGET_RESET_VERSION = "v10";
 const NOTIFY_STATE_KEY = "ft_target_notify_state";
 const NOTIFICATIONS_KEY = "ft_notifications";
 const NOTIFICATIONS_VERSION_KEY = "ft_notifications_version";
 const NOTIFICATIONS_VERSION = "v5";
+const TIMEOUT_ERROR_CODE = "REQUEST_TIMEOUT";
 
 function todayKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -55,15 +55,15 @@ function appendNotification({ title, message }) {
   window.localStorage.setItem(NOTIFICATIONS_VERSION_KEY, NOTIFICATIONS_VERSION);
 }
 
-function getFriendlyErrorMessage(error) {
+function getFriendlyErrorMessage(error, t) {
   const message = String(error?.message || "").toLowerCase();
   if (message.includes("high demand") || message.includes("quota") || message.includes("rate")) {
-    return "(._.) Please wait a moment and try again.";
+    return t?.target?.fallback?.busy || "(._.) Please wait a moment and try again.";
   }
   return null;
 }
 
-async function fetchPersonaMessage(payload) {
+async function fetchPersonaMessage(payload, language) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -71,7 +71,7 @@ async function fetchPersonaMessage(payload) {
     const response = await fetch("/api/personality", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, language }),
       signal: controller.signal,
     });
 
@@ -83,7 +83,9 @@ async function fetchPersonaMessage(payload) {
     return data?.text || "";
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Request timed out. Please try again.");
+      const timeoutError = new Error("Request timed out.");
+      timeoutError.code = TIMEOUT_ERROR_CODE;
+      throw timeoutError;
     }
     throw error;
   } finally {
@@ -92,6 +94,7 @@ async function fetchPersonaMessage(payload) {
 }
 
 export default function TargetPage() {
+  const { language, t } = useLanguage();
   const { transactions, isLoading } = useTransactions();
   const [personaPrompt, setPersonaPrompt] = useState("");
   const [personaReply, setPersonaReply] = useState("");
@@ -114,6 +117,19 @@ export default function TargetPage() {
     spentToday: 0,
   });
 
+  const targetCopy = t?.target || {};
+  const targetErrors = targetCopy.errors || {};
+  const targetFallback = targetCopy.fallback || {};
+  const targetNotifications = targetCopy.notifications || {};
+
+  const notificationTitles = {
+    targetSet: targetNotifications.targetSet || "Target Set",
+    halfwayAlert: targetNotifications.halfwayAlert || "Halfway Alert",
+    targetReached: targetNotifications.targetReached || "Target Reached",
+    overBudget: targetNotifications.overBudget || "Over Budget",
+    daySummary: targetNotifications.daySummary || "Day Summary",
+  };
+
   function updatePersonaReply(text) {
     setPersonaReply(text);
     if (typeof window !== "undefined") {
@@ -121,16 +137,12 @@ export default function TargetPage() {
     }
   }
 
+  function resolveTimeoutErrorMessage() {
+    return targetErrors.requestTimeout || "Request timed out. Please try again.";
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    const resetVersion = window.localStorage.getItem(TARGET_RESET_VERSION_KEY);
-    if (resetVersion !== TARGET_RESET_VERSION) {
-      window.localStorage.removeItem(TARGET_KEY);
-      window.localStorage.removeItem(TARGET_DATE_KEY);
-      window.localStorage.removeItem(NOTIFY_STATE_KEY);
-      window.localStorage.setItem(TARGET_RESET_VERSION_KEY, TARGET_RESET_VERSION);
-    }
 
     const storedPersona = window.localStorage.getItem(PERSONA_KEY) || "";
     const storedReply = window.localStorage.getItem(PERSONA_REPLY_KEY) || "";
@@ -226,21 +238,26 @@ export default function TargetPage() {
 
       idleTriggeredRef.current = true;
       setIsReplying(true);
-      fetchPersonaMessage({
-        persona: latestRef.current.personaPrompt,
-        intent: "idle_tip",
-        target: latestRef.current.targetAmount,
-        remaining: latestRef.current.remaining,
-        spent: latestRef.current.spentToday,
-      })
+      fetchPersonaMessage(
+        {
+          persona: latestRef.current.personaPrompt,
+          intent: "idle_tip",
+          target: latestRef.current.targetAmount,
+          remaining: latestRef.current.remaining,
+          spent: latestRef.current.spentToday,
+        },
+        language
+      )
         .then((text) => {
           if (text) {
             updatePersonaReply(text);
           }
         })
         .catch((err) => {
-          const friendly = getFriendlyErrorMessage(err);
-          updatePersonaReply(friendly || "(._.) Tip: keep your spending tied to your priorities.");
+          const friendly = getFriendlyErrorMessage(err, t);
+          updatePersonaReply(
+            friendly || targetFallback.idleTip || "(._.) Tip: keep your spending tied to your priorities."
+          );
         })
         .finally(() => {
           setIsReplying(false);
@@ -248,7 +265,7 @@ export default function TargetPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [personaPrompt, isBlocking, isReplying, isQuestionLoading]);
+  }, [personaPrompt, isBlocking, isReplying, isQuestionLoading, language, t, targetFallback.idleTip]);
 
   useEffect(() => {
     if (!targetAmount || !personaPrompt || isLoading) return;
@@ -282,19 +299,23 @@ export default function TargetPage() {
         updateNotifyState(notifyState);
         try {
           setIsReplying(true);
-          const text = await fetchPersonaMessage({
-            persona: personaPrompt,
-            intent: "encourage_start",
-            target: targetAmount,
-            remaining,
-            spent: spentToday,
-          });
-          appendNotification({ title: "Target Set", message: text });
+          const text = await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent: "encourage_start",
+              target: targetAmount,
+              remaining,
+              spent: spentToday,
+            },
+            language
+          );
+          appendNotification({ title: notificationTitles.targetSet, message: text });
           if (text) updatePersonaReply(text);
         } catch (err) {
-          const friendly = getFriendlyErrorMessage(err);
-          const fallback = friendly || "(._.) Keep it steady today and watch your spending.";
-          appendNotification({ title: "Target Set", message: fallback });
+          const friendly = getFriendlyErrorMessage(err, t);
+          const fallback =
+            friendly || targetFallback.encourageStart || "(._.) Keep it steady today and watch your spending.";
+          appendNotification({ title: notificationTitles.targetSet, message: fallback });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -306,19 +327,23 @@ export default function TargetPage() {
         updateNotifyState(notifyState);
         try {
           setIsReplying(true);
-          const text = await fetchPersonaMessage({
-            persona: personaPrompt,
-            intent: "caution_half",
-            target: targetAmount,
-            remaining,
-            spent: spentToday,
-          });
-          appendNotification({ title: "Halfway Alert", message: text });
+          const text = await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent: "caution_half",
+              target: targetAmount,
+              remaining,
+              spent: spentToday,
+            },
+            language
+          );
+          appendNotification({ title: notificationTitles.halfwayAlert, message: text });
           if (text) updatePersonaReply(text);
         } catch (err) {
-          const friendly = getFriendlyErrorMessage(err);
-          const fallback = friendly || "(._.) You are halfway there. Keep it under control.";
-          appendNotification({ title: "Halfway Alert", message: fallback });
+          const friendly = getFriendlyErrorMessage(err, t);
+          const fallback =
+            friendly || targetFallback.cautionHalf || "(._.) You are halfway there. Keep it under control.";
+          appendNotification({ title: notificationTitles.halfwayAlert, message: fallback });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -330,19 +355,23 @@ export default function TargetPage() {
         updateNotifyState(notifyState);
         try {
           setIsReplying(true);
-          const text = await fetchPersonaMessage({
-            persona: personaPrompt,
-            intent: "target_reached",
-            target: targetAmount,
-            remaining,
-            spent: spentToday,
-          });
-          appendNotification({ title: "Target Reached", message: text });
+          const text = await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent: "target_reached",
+              target: targetAmount,
+              remaining,
+              spent: spentToday,
+            },
+            language
+          );
+          appendNotification({ title: notificationTitles.targetReached, message: text });
           if (text) updatePersonaReply(text);
         } catch (err) {
-          const friendly = getFriendlyErrorMessage(err);
-          const fallback = friendly || "(._.) You have reached your target for today.";
-          appendNotification({ title: "Target Reached", message: fallback });
+          const friendly = getFriendlyErrorMessage(err, t);
+          const fallback =
+            friendly || targetFallback.targetReached || "(._.) You have reached your target for today.";
+          appendNotification({ title: notificationTitles.targetReached, message: fallback });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -354,19 +383,23 @@ export default function TargetPage() {
         updateNotifyState(notifyState);
         try {
           setIsReplying(true);
-          const text = await fetchPersonaMessage({
-            persona: personaPrompt,
-            intent: "over_budget",
-            target: targetAmount,
-            remaining,
-            spent: spentToday,
-          });
-          appendNotification({ title: "Over Budget", message: text });
+          const text = await fetchPersonaMessage(
+            {
+              persona: personaPrompt,
+              intent: "over_budget",
+              target: targetAmount,
+              remaining,
+              spent: spentToday,
+            },
+            language
+          );
+          appendNotification({ title: notificationTitles.overBudget, message: text });
           if (text) updatePersonaReply(text);
         } catch (err) {
-          const friendly = getFriendlyErrorMessage(err);
-          const fallback = friendly || "(>_<) You are over budget. Pause spending for now.";
-          appendNotification({ title: "Over Budget", message: fallback });
+          const friendly = getFriendlyErrorMessage(err, t);
+          const fallback =
+            friendly || targetFallback.overBudget || "(>_<) You are over budget. Pause spending for now.";
+          appendNotification({ title: notificationTitles.overBudget, message: fallback });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -375,54 +408,31 @@ export default function TargetPage() {
     };
 
     runNotifications();
-  }, [personaPrompt, targetAmount, remaining, spentToday, todayKeyValue, isLoading]);
-
-  useEffect(() => {
-    if (!targetAmount || !targetDate) return;
-    if (targetDate === todayKeyValue) return;
-    if (typeof window === "undefined") return;
-
-    const spendForStoredDate = transactions.reduce((sum, item) => {
-      if (item.type !== "expense") return sum;
-      const txnDate = new Date(item.transactionDate);
-      if (!isSameDay(txnDate, new Date(targetDate))) return sum;
-      return sum + Number(item.amount || 0);
-    }, 0);
-
-    if (spendForStoredDate <= targetAmount && personaPrompt) {
-      fetchPersonaMessage({
-        persona: personaPrompt,
-        intent: "day_end",
-        target: targetAmount,
-        remaining: targetAmount - spendForStoredDate,
-        spent: spendForStoredDate,
-      })
-        .then((text) => {
-          appendNotification({ title: "Day Summary", message: text });
-        })
-        .catch((err) => {
-          const friendly = getFriendlyErrorMessage(err);
-          appendNotification({
-            title: "Day Summary",
-            message: friendly || "(._.) Nice work today. Keep saving and spend on what matters most.",
-          });
-        });
-    }
-
-    setTargetAmount(null);
-    setTargetInput("");
-    setTargetDate("");
-    setPendingTarget(null);
-    window.localStorage.removeItem(TARGET_KEY);
-    window.localStorage.removeItem(TARGET_DATE_KEY);
-  }, [targetDate, targetAmount, todayKeyValue, transactions, personaPrompt]);
+  }, [
+    personaPrompt,
+    targetAmount,
+    remaining,
+    spentToday,
+    todayKeyValue,
+    isLoading,
+    language,
+    t,
+    targetFallback.encourageStart,
+    targetFallback.cautionHalf,
+    targetFallback.targetReached,
+    targetFallback.overBudget,
+    notificationTitles.targetSet,
+    notificationTitles.halfwayAlert,
+    notificationTitles.targetReached,
+    notificationTitles.overBudget,
+  ]);
 
   function handleTargetSubmit(event) {
     event.preventDefault();
     if (!targetInput.trim()) return;
     const numeric = Number(targetInput);
     if (Number.isNaN(numeric) || numeric <= 0) {
-      setError("Please enter a valid target amount.");
+      setError(targetErrors.invalidTarget || "Please enter a valid target amount.");
       return;
     }
 
@@ -456,19 +466,23 @@ export default function TargetPage() {
     if (personaPrompt) {
       try {
         setIsReplying(true);
-        const text = await fetchPersonaMessage({
-          persona: personaPrompt,
-          intent: "encourage_start",
-          target: numeric,
-          remaining: numeric - spentToday,
-          spent: spentToday,
-        });
-        appendNotification({ title: "Target Set", message: text });
+        const text = await fetchPersonaMessage(
+          {
+            persona: personaPrompt,
+            intent: "encourage_start",
+            target: numeric,
+            remaining: numeric - spentToday,
+            spent: spentToday,
+          },
+          language
+        );
+        appendNotification({ title: notificationTitles.targetSet, message: text });
         if (text) updatePersonaReply(text);
       } catch (err) {
-        const friendly = getFriendlyErrorMessage(err);
-        const fallback = friendly || "(._.) Keep it steady today and watch your spending.";
-        appendNotification({ title: "Target Set", message: fallback });
+        const friendly = getFriendlyErrorMessage(err, t);
+        const fallback =
+          friendly || targetFallback.encourageStart || "(._.) Keep it steady today and watch your spending.";
+        appendNotification({ title: notificationTitles.targetSet, message: fallback });
         updatePersonaReply(fallback);
       } finally {
         setIsReplying(false);
@@ -484,20 +498,27 @@ export default function TargetPage() {
     setIsReplying(true);
 
     try {
-      const text = await fetchPersonaMessage({
-        persona: personaPrompt,
-        intent: "financial_q",
-        question: questionInput.trim(),
-        target: targetAmount,
-        remaining,
-        spent: spentToday,
-      });
+      const text = await fetchPersonaMessage(
+        {
+          persona: personaPrompt,
+          intent: "financial_q",
+          question: questionInput.trim(),
+          target: targetAmount,
+          remaining,
+          spent: spentToday,
+        },
+        language
+      );
       if (text) updatePersonaReply(text);
       setQuestionInput("");
     } catch (err) {
-      const friendly = getFriendlyErrorMessage(err);
-      setError(err.message || "Failed to answer your question.");
+      const friendly = getFriendlyErrorMessage(err, t);
       if (friendly) updatePersonaReply(friendly);
+      if (err?.code === TIMEOUT_ERROR_CODE) {
+        setError(resolveTimeoutErrorMessage());
+      } else {
+        setError(targetErrors.questionFailed || "Failed to answer your question.");
+      }
     } finally {
       setIsQuestionLoading(false);
       setIsReplying(false);
@@ -518,6 +539,13 @@ export default function TargetPage() {
         ? `-${formatCurrency(Math.abs(remaining), "RM")}`
         : formatCurrency(remaining, "RM");
 
+  const confirmTargetLabel = pendingTarget
+    ? (targetCopy.confirmTarget || "Confirm RM {amount} for today?").replace(
+        "{amount}",
+        Number(pendingTarget).toFixed(2)
+      )
+    : "";
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col pb-28">
@@ -528,7 +556,7 @@ export default function TargetPage() {
               href="/target/change"
               className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-transparent px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
             >
-              Change Personality
+              {targetCopy.changePersonality || "Change Personality"}
             </Link>
           ) : (
             <div />
@@ -538,13 +566,13 @@ export default function TargetPage() {
         {showSetup ? (
           <div className="flex flex-1 items-center justify-center">
             <p className="max-w-md text-center text-base text-slate-400">
-              What kind of person do you want to supervise you?
+              {targetCopy.setupPrompt || "What kind of person do you want to supervise you?"}
             </p>
           </div>
         ) : (
           <div className="mt-6 flex flex-1 flex-col gap-6">
             <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-              <p>{personaReply || "(._.) How much do you want to spend today?"}</p>
+              <p>{personaReply || targetCopy.defaultReply || "(._.) How much do you want to spend today?"}</p>
               {isReplying ? (
                 <span className="ai-dots" aria-label="Loading">
                   <span className="ai-dot" />
@@ -559,7 +587,7 @@ export default function TargetPage() {
                 <div
                   className="absolute inset-0 rounded-full"
                   style={{
-                    background: `conic-gradient(${ringColor} ${ringProgress * 360}deg, #e2e8f0 0deg)`
+                    background: `conic-gradient(${ringColor} ${ringProgress * 360}deg, #e2e8f0 0deg)`,
                   }}
                 />
                 <div className="absolute inset-3 rounded-full bg-white" />
@@ -574,13 +602,19 @@ export default function TargetPage() {
                         {remainingDisplay}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {remaining !== null && remaining < 0 ? "Over budget" : "Remaining today"}
+                        {remaining !== null && remaining < 0
+                          ? targetCopy.overBudget || "Over budget"
+                          : targetCopy.remainingToday || "Remaining today"}
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-2xl font-semibold text-slate-400">Set target</p>
-                      <p className="mt-1 text-xs text-slate-400">Daily limit in RM</p>
+                      <p className="text-2xl font-semibold text-slate-400">
+                        {targetCopy.setTarget || "Set target"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {targetCopy.dailyLimit || "Daily limit in RM"}
+                      </p>
                     </>
                   )}
                 </div>
@@ -595,7 +629,7 @@ export default function TargetPage() {
                     step="0.01"
                     value={targetInput}
                     onChange={(event) => setTargetInput(event.target.value)}
-                    placeholder="Set today's target"
+                    placeholder={targetCopy.setTargetPlaceholder || "Set today's target"}
                     className="flex-1 bg-transparent text-sm text-slate-700 outline-none"
                     disabled={Boolean(targetAmount)}
                   />
@@ -604,27 +638,27 @@ export default function TargetPage() {
                     disabled={Boolean(targetAmount)}
                     className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    Set
+                    {targetCopy.setButton || "Set"}
                   </button>
                 </div>
 
                 {pendingTarget ? (
                   <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-600 shadow-sm">
-                    <span>Confirm RM {Number(pendingTarget).toFixed(2)} for today?</span>
+                    <span>{confirmTargetLabel}</span>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={handleConfirmTarget}
                         className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
                       >
-                        Confirm
+                        {targetCopy.confirm || "Confirm"}
                       </button>
                       <button
                         type="button"
                         onClick={handleCancelTarget}
                         className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
                       >
-                        Cancel
+                        {t?.common?.cancel || "Cancel"}
                       </button>
                     </div>
                   </div>
@@ -634,7 +668,7 @@ export default function TargetPage() {
               <div className="text-xs text-slate-400">
                 {targetAmount ? (
                   <>
-                    <span>Spent today: </span>
+                    <span>{targetCopy.spentToday || "Spent today:"} </span>
                     <span className={isOverBudget ? "text-red-500" : "text-slate-400"}>
                       {formatCurrency(spentToday, "RM")}
                     </span>
@@ -656,7 +690,9 @@ export default function TargetPage() {
               type="text"
               value={questionInput}
               onChange={(event) => setQuestionInput(event.target.value)}
-              placeholder="If you have any financial questions, ask below."
+              placeholder={
+                targetCopy.questionPlaceholder || "If you have any financial questions, ask below."
+              }
               className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none"
               disabled={isQuestionLoading}
             />
@@ -665,7 +701,7 @@ export default function TargetPage() {
               disabled={isQuestionLoading || !questionInput.trim()}
               className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Send
+              {targetCopy.sendButton || "Send"}
             </button>
           </div>
         </form>
@@ -689,6 +725,3 @@ export default function TargetPage() {
     </main>
   );
 }
-
-
-

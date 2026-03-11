@@ -1,8 +1,14 @@
 ﻿import { NextResponse } from "next/server";
+import { normalizeLanguage } from "@/lib/i18n";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const DISALLOWED_PATTERN = /(18\+|nsfw|explicit|adult|sexual|erotic|porn|fetish|onlyfans)/i;
+const LANGUAGE_LABELS = {
+  en: "English",
+  zh: "Simplified Chinese",
+  ms: "Bahasa Melayu",
+};
 
 function formatAmount(value) {
   if (value === undefined || value === null || Number.isNaN(Number(value))) {
@@ -40,33 +46,30 @@ function buildUserPrompt({ persona, intent, target, remaining, spent, question }
 
 export async function POST(request) {
   if (!GEMINI_API_KEY) {
-    return NextResponse.json(
-      { error: "Missing GEMINI_API_KEY." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Missing GEMINI_API_KEY." }, { status: 500 });
   }
 
   const body = await request.json();
   const persona = String(body?.persona || "").trim();
   const intent = String(body?.intent || "").trim();
   const question = String(body?.question || "").trim();
+  const language = normalizeLanguage(body?.language || "en");
 
   if (!persona) {
-    return NextResponse.json(
-      { error: "Personality is required." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Personality is required." }, { status: 400 });
   }
 
   if (DISALLOWED_PATTERN.test(persona)) {
-    return NextResponse.json(
-      { error: "The personality you described is not compliant." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "The personality you described is not compliant." }, { status: 400 });
   }
 
-  const systemPrompt =
+  const baseSystemPrompt =
     "You create a single short English reply. Start with one fitting emoticon. Keep it under 140 characters. Stay in character but always provide helpful, relevant information. No explicit or adult content. No extra explanation.";
+
+  const systemPrompt =
+    language === "en"
+      ? baseSystemPrompt
+      : `${baseSystemPrompt} Then translate the final reply into ${LANGUAGE_LABELS[language]}. Keep the emoticon at the start. Return only the translated text. Keep it under 140 characters in the target language. No labels or quotation marks.`;
 
   const userPrompt = buildUserPrompt({
     persona,
@@ -98,10 +101,7 @@ export async function POST(request) {
 
   if (!response.ok) {
     const errorPayload = await response.json().catch(() => ({}));
-    return NextResponse.json(
-      { error: errorPayload?.error?.message || "Failed to generate response." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: errorPayload?.error?.message || "Failed to generate response." }, { status: 500 });
   }
 
   const payload = await response.json();
@@ -111,10 +111,7 @@ export async function POST(request) {
     "";
 
   if (!text) {
-    return NextResponse.json(
-      { error: "Empty response from model." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Empty response from model." }, { status: 500 });
   }
 
   return NextResponse.json({ text });

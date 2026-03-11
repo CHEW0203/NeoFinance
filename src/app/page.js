@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { BalancePie } from "@/features/dashboard/components/balance-pie";
 import { TopNav } from "@/features/dashboard/components/top-nav";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
@@ -9,15 +9,15 @@ import { formatCurrency } from "@/utils/format";
 function categoryIcon(category) {
   if (category?.icon) return category.icon;
   const value = String(category?.name || "").toLowerCase();
-  if (value.includes("salary")) return "💼";
-  if (value.includes("allowance")) return "💰";
-  if (value.includes("bonus")) return "🏆";
-  if (value.includes("income")) return "📈";
-  if (value.includes("food")) return "🍜";
-  if (value.includes("transport")) return "🚌";
-  if (value.includes("gift")) return "🎁";
-  if (category?.type === "income") return "💼";
-  return "📦";
+  if (value.includes("salary")) return "ðŸ’¼";
+  if (value.includes("allowance")) return "ðŸ’°";
+  if (value.includes("bonus")) return "ðŸ†";
+  if (value.includes("income")) return "ðŸ“ˆ";
+  if (value.includes("food")) return "ðŸœ";
+  if (value.includes("transport")) return "ðŸšŒ";
+  if (value.includes("gift")) return "ðŸŽ";
+  if (category?.type === "income") return "ðŸ’¼";
+  return "ðŸ“¦";
 }
 
 export default async function Home() {
@@ -65,7 +65,7 @@ export default async function Home() {
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
         <TopNav monthLabel={monthLabel} currentUser={currentUser} />
 
-        <div className="flex flex-col items-center justify-center gap-5">
+        <div className="dashboard-main">        <div className="flex flex-col items-center justify-center gap-5">
           <BalancePie
             totalBalance={stats.totalBalance}
             monthlyExpense={stats.monthlyExpense}
@@ -140,7 +140,12 @@ export default async function Home() {
             );
           })}
         </section>
+        </div>
       </section>
     </main>
   );
 }
+
+
+
+

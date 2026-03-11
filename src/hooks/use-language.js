@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   DEFAULT_LANGUAGE,
@@ -21,7 +21,11 @@ function readCookieLanguage() {
 
 export function useLanguage() {
   const router = useRouter();
-  const [language, setLanguageState] = useState(readCookieLanguage);
+  const [language, setLanguageState] = useState(DEFAULT_LANGUAGE);
+
+  useEffect(() => {
+    setLanguageState(readCookieLanguage());
+  }, []);
   const t = useMemo(() => getDictionary(language), [language]);
 
   function setLanguage(nextLanguage) {
@@ -41,3 +45,5 @@ export function useLanguage() {
     t,
   };
 }
+
+

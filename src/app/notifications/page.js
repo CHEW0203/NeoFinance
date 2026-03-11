@@ -1,11 +1,18 @@
 ﻿"use client";
 
 import { BackButton } from "@/components/back-button";
+import { useLanguage } from "@/hooks/use-language";
 import { useNotifications } from "@/lib/use-notifications";
 
 export default function NotificationsPage() {
+  const { t } = useLanguage();
   const { notifications, markAllRead } = useNotifications();
   const hasUnread = notifications.some((item) => !item.isRead);
+
+  const title = t?.pages?.notifications || "Notifications";
+  const markAllReadLabel = t?.pages?.markAllRead || "Mark All Read";
+  const emptyLabel = t?.pages?.noNotification || "No notification yet.";
+  const defaultTitle = t?.menu?.notification || "Notification";
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
@@ -18,14 +25,14 @@ export default function NotificationsPage() {
             disabled={!hasUnread}
             className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Read All Message
+            {markAllReadLabel}
           </button>
         </div>
 
         <section className="rounded-3xl border border-slate-300 bg-white p-6">
-          <h1 className="text-2xl font-semibold text-slate-900">Notifications</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
           {notifications.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No notification yet.</p>
+            <p className="mt-4 text-sm text-slate-500">{emptyLabel}</p>
           ) : (
             <div className="mt-4 space-y-3">
               {notifications.map((item) => {
@@ -40,7 +47,7 @@ export default function NotificationsPage() {
                     }`}
                   >
                     <p className={`text-sm font-semibold ${isRead ? "text-slate-400" : "text-slate-900"}`}>
-                      {item.title || "Notification"}
+                      {item.title || defaultTitle}
                     </p>
                     {item.message ? (
                       <p className={`mt-1 text-sm ${isRead ? "text-slate-400" : "text-slate-600"}`}>

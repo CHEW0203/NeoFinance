@@ -1,4 +1,4 @@
-export const translations = {
+﻿export const translations = {
   en: {
     common: {
       back: "Back",
@@ -7,6 +7,7 @@ export const translations = {
       logout: "Logout",
       profile: "Profile",
       cancel: "Cancel",
+      details: "Details",
       ok: "OK",
     },
     menu: {
@@ -23,6 +24,7 @@ export const translations = {
       streak: "Streak",
       language: "Language",
       notification: "Notification",
+      target: "Target",
       calendar: "Calendar",
     },
     dashboard: {
@@ -73,7 +75,9 @@ export const translations = {
     },
     pages: {
       notifications: "Notifications",
+      newNotification: "New notification",
       noNotification: "No notification yet.",
+      markAllRead: "Mark All Read",
       noRecordsForDay: "No records for this day.",
       scan: "Scan",
       scanDesc: "Receipt scanning module will be added here.",
@@ -119,6 +123,47 @@ export const translations = {
       deleteFailed: "Failed to delete record.",
       deleteCategoryFailed: "Failed to delete category.",
     },
+    target: {
+      changePersonality: "Change Personality",
+      changePersonalityDesc: "Describe the new personality you want to use.",
+      personaPlaceholder: "For example: strict but supportive",
+      updatePersonality: "Update",
+      setupPrompt: "What kind of person do you want to supervise you?",
+      defaultReply: "(._.) How much do you want to spend today?",
+      remainingToday: "Remaining today",
+      overBudget: "Over budget",
+      setTarget: "Set target",
+      dailyLimit: "Daily limit in RM",
+      setTargetPlaceholder: "Set today's target",
+      setButton: "Set",
+      confirmTarget: "Confirm RM {amount} for today?",
+      confirm: "Confirm",
+      spentToday: "Spent today:",
+      questionPlaceholder: "If you have any financial questions, ask below.",
+      sendButton: "Send",
+      errors: {
+        invalidTarget: "Please enter a valid target amount.",
+        questionFailed: "Failed to answer your question.",
+        requestTimeout: "Request timed out. Please try again.",
+        updatePersonalityFailed: "Failed to update personality.",
+      },
+      fallback: {
+        busy: "(._.) Please wait a moment and try again.",
+        idleTip: "(._.) Tip: keep your spending tied to your priorities.",
+        encourageStart: "(._.) Keep it steady today and watch your spending.",
+        cautionHalf: "(._.) You are halfway there. Keep it under control.",
+        targetReached: "(._.) You have reached your target for today.",
+        overBudget: "(>_<) You are over budget. Pause spending for now.",
+        daySummary: "(._.) Nice work today. Keep saving and spend on what matters most.",
+      },
+      notifications: {
+        targetSet: "Target Set",
+        halfwayAlert: "Halfway Alert",
+        targetReached: "Target Reached",
+        overBudget: "Over Budget",
+        daySummary: "Day Summary",
+      },
+    },
   },
   zh: {
     common: {
@@ -128,6 +173,7 @@ export const translations = {
       logout: "登出",
       profile: "个人资料",
       cancel: "取消",
+      details: "详情",
       ok: "确定",
     },
     menu: {
@@ -144,6 +190,7 @@ export const translations = {
       streak: "连续记账",
       language: "语言",
       notification: "通知",
+      target: "目标",
       calendar: "日历",
     },
     dashboard: {
@@ -193,7 +240,9 @@ export const translations = {
     },
     pages: {
       notifications: "通知",
+      newNotification: "新通知",
       noNotification: "暂无通知。",
+      markAllRead: "全部标为已读",
       noRecordsForDay: "当天没有记录。",
       scan: "扫描",
       scanDesc: "收据扫描功能会在这里加入。",
@@ -239,6 +288,47 @@ export const translations = {
       deleteFailed: "删除记录失败。",
       deleteCategoryFailed: "删除分类失败。",
     },
+    target: {
+      changePersonality: "更换性格",
+      changePersonalityDesc: "描述你想使用的新性格。",
+      personaPlaceholder: "例如：严格但支持你",
+      updatePersonality: "更新",
+      setupPrompt: "你希望由什么样的人来监督你？",
+      defaultReply: "(._.) 今天想花多少？",
+      remainingToday: "今日剩余",
+      overBudget: "超出预算",
+      setTarget: "设定目标",
+      dailyLimit: "每日上限（RM）",
+      setTargetPlaceholder: "设置今天的目标",
+      setButton: "设置",
+      confirmTarget: "确认今天设定 RM {amount}？",
+      confirm: "确认",
+      spentToday: "今日已花：",
+      questionPlaceholder: "有任何理财问题，欢迎在这里提问。",
+      sendButton: "发送",
+      errors: {
+        invalidTarget: "请输入有效的目标金额。",
+        questionFailed: "无法回答你的问题。",
+        requestTimeout: "请求超时，请重试。",
+        updatePersonalityFailed: "更新性格失败。",
+      },
+      fallback: {
+        busy: "(._.) 请稍后再试。",
+        idleTip: "(._.) 提示：把支出和你的优先事项保持一致。",
+        encourageStart: "(._.) 今天稳住节奏，注意支出。",
+        cautionHalf: "(._.) 已经用掉一半了，记得控制一下。",
+        targetReached: "(._.) 你已达到今天的目标。",
+        overBudget: "(>_<) 你已超出预算，先暂停花费吧。",
+        daySummary: "(._.) 今天表现不错，继续存钱并把钱花在重要的事上。",
+      },
+      notifications: {
+        targetSet: "目标已设定",
+        halfwayAlert: "过半提醒",
+        targetReached: "已达目标",
+        overBudget: "超出预算",
+        daySummary: "今日总结",
+      },
+    },
   },
   ms: {
     common: {
@@ -248,6 +338,7 @@ export const translations = {
       logout: "Log keluar",
       profile: "Profil",
       cancel: "Batal",
+      details: "Butiran",
       ok: "OK",
     },
     menu: {
@@ -264,6 +355,7 @@ export const translations = {
       streak: "Streak",
       language: "Bahasa",
       notification: "Notifikasi",
+      target: "Sasaran",
       calendar: "Kalendar",
     },
     dashboard: {
@@ -314,7 +406,9 @@ export const translations = {
     },
     pages: {
       notifications: "Notifikasi",
+      newNotification: "Notifikasi baru",
       noNotification: "Belum ada notifikasi.",
+      markAllRead: "Tandai semua sebagai dibaca",
       noRecordsForDay: "Tiada rekod untuk hari ini.",
       scan: "Imbas",
       scanDesc: "Modul imbas resit akan ditambah di sini.",
@@ -360,5 +454,53 @@ export const translations = {
       deleteFailed: "Gagal memadam rekod.",
       deleteCategoryFailed: "Gagal memadam kategori.",
     },
+    target: {
+      changePersonality: "Tukar Personaliti",
+      changePersonalityDesc: "Terangkan personaliti baru yang ingin digunakan.",
+      personaPlaceholder: "Contoh: tegas tetapi menyokong",
+      updatePersonality: "Kemas kini",
+      setupPrompt: "Apakah jenis orang yang anda mahu mengawasi anda?",
+      defaultReply: "(._.) Berapa anda mahu belanja hari ini?",
+      remainingToday: "Baki hari ini",
+      overBudget: "Lebih bajet",
+      setTarget: "Tetapkan sasaran",
+      dailyLimit: "Had harian dalam RM",
+      setTargetPlaceholder: "Tetapkan sasaran hari ini",
+      setButton: "Tetapkan",
+      confirmTarget: "Sahkan RM {amount} untuk hari ini?",
+      confirm: "Sahkan",
+      spentToday: "Belanja hari ini:",
+      questionPlaceholder: "Jika ada soalan kewangan, tanya di sini.",
+      sendButton: "Hantar",
+      errors: {
+        invalidTarget: "Sila masukkan jumlah sasaran yang sah.",
+        questionFailed: "Gagal menjawab soalan anda.",
+        requestTimeout: "Permintaan tamat masa. Sila cuba lagi.",
+        updatePersonalityFailed: "Gagal mengemas kini personaliti.",
+      },
+      fallback: {
+        busy: "(._.) Sila tunggu seketika dan cuba lagi.",
+        idleTip: "(._.) Tip: kaitkan perbelanjaan dengan keutamaan anda.",
+        encourageStart: "(._.) Kekal konsisten hari ini dan awasi perbelanjaan.",
+        cautionHalf: "(._.) Anda sudah separuh jalan. Kekalkan kawalan.",
+        targetReached: "(._.) Anda telah capai sasaran hari ini.",
+        overBudget: "(>_<) Anda melebihi bajet. Hentikan perbelanjaan buat sementara.",
+        daySummary: "(._.) Kerja bagus hari ini. Teruskan menyimpan dan berbelanja pada yang penting.",
+      },
+      notifications: {
+        targetSet: "Sasaran Ditetapkan",
+        halfwayAlert: "Amaran Separuh",
+        targetReached: "Sasaran Dicapai",
+        overBudget: "Lebih Bajet",
+        daySummary: "Ringkasan Hari",
+      },
+    },
   },
 };
+
+
+
+
+
+
+

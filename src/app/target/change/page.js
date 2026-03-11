@@ -3,23 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
+import { useLanguage } from "@/hooks/use-language";
 
 const PERSONA_KEY = "ft_persona_prompt";
 const PERSONA_REPLY_KEY = "ft_persona_reply";
 
-function getFriendlyErrorMessage(error) {
+function getFriendlyErrorMessage(error, t) {
   const message = String(error?.message || "").toLowerCase();
   if (message.includes("high demand") || message.includes("quota") || message.includes("rate")) {
-    return "(._.) Please wait a moment and try again.";
+    return t?.target?.fallback?.busy || "(._.) Please wait a moment and try again.";
   }
   return null;
 }
 
-async function fetchPersonaMessage(payload) {
+async function fetchPersonaMessage(payload, language) {
   const response = await fetch("/api/personality", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, language }),
   });
 
   const data = await response.json().catch(() => ({}));
@@ -32,9 +33,13 @@ async function fetchPersonaMessage(payload) {
 
 export default function ChangePersonalityPage() {
   const router = useRouter();
+  const { language, t } = useLanguage();
   const [input, setInput] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const targetCopy = t?.target || {};
+  const targetErrors = targetCopy.errors || {};
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -43,16 +48,19 @@ export default function ChangePersonalityPage() {
     setIsLoading(true);
 
     try {
-      const text = await fetchPersonaMessage({
-        persona: input.trim(),
-        intent: "ask_target",
-      });
+      const text = await fetchPersonaMessage(
+        {
+          persona: input.trim(),
+          intent: "ask_target",
+        },
+        language
+      );
       window.localStorage.setItem(PERSONA_KEY, input.trim());
       window.localStorage.setItem(PERSONA_REPLY_KEY, text);
       router.push("/target");
     } catch (err) {
-      const friendly = getFriendlyErrorMessage(err);
-      setError(err.message || "Failed to update personality.");
+      const friendly = getFriendlyErrorMessage(err, t);
+      setError(targetErrors.updatePersonalityFailed || "Failed to update personality.");
       if (friendly) {
         window.localStorage.setItem(PERSONA_REPLY_KEY, friendly);
       }
@@ -71,9 +79,11 @@ export default function ChangePersonalityPage() {
 
         <div className="mt-10 flex flex-1 flex-col items-center justify-center gap-6">
           <div className="text-center">
-            <p className="text-base font-semibold text-slate-900">Change Personality</p>
+            <p className="text-base font-semibold text-slate-900">
+              {targetCopy.changePersonality || "Change Personality"}
+            </p>
             <p className="mt-2 text-sm text-slate-400">
-              Describe the new personality you want to use.
+              {targetCopy.changePersonalityDesc || "Describe the new personality you want to use."}
             </p>
           </div>
 
@@ -85,7 +95,7 @@ export default function ChangePersonalityPage() {
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="For example: strict but supportive"
+              placeholder={targetCopy.personaPlaceholder || "For example: strict but supportive"}
               className="flex-1 bg-transparent text-sm text-slate-700 outline-none"
               disabled={isLoading}
             />
@@ -94,7 +104,7 @@ export default function ChangePersonalityPage() {
               disabled={isLoading}
               className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Update
+              {targetCopy.updatePersonality || "Update"}
             </button>
           </form>
         </div>
