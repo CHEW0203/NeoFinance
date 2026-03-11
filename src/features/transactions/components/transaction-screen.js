@@ -5,47 +5,270 @@ import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
 
-const CATEGORY_ICON_MAP = {
-  food: "🍜",
-  transport: "🚌",
-  gift: "🎁",
-  others: "📦",
-  salary: "💼",
+const ICONS = {
+  FOOD: "\u{1F354}",
+  BREAKFAST: "\u{1F373}",
+  LUNCH: "\u{1F35C}",
+  DINNER: "\u{1F37D}\uFE0F",
+  SNACK: "\u{1F36A}",
+  DRINKS: "\u{1F964}",
+  TRANSPORT: "\u{1F68C}",
+  SHOPPING: "\u{1F6CD}\uFE0F",
+  GIFT: "\u{1F381}",
+  RENT: "\u{1F3E0}",
+  UTILITIES: "\u{1F4A1}",
+  HEALTH: "\u{1F48A}",
+  SALARY: "\u{1F4BC}",
+  ALLOWANCE: "\u{1F4B0}",
+  BONUS: "\u{1F3C6}",
+  FREELANCE: "\u{1F4BB}",
+  INVESTMENT: "\u{1F4C8}",
+  REFUND: "\u{1F4B3}",
+  BOX: "\u{1F4E6}",
+  PIZZA: "\u{1F355}",
+  TAXI: "\u{1F695}",
+  PHONE: "\u{1F4F1}",
+  GAME: "\u{1F3AE}",
+  MUSIC: "\u{1F3B5}",
+  BANK: "\u{1F3E6}",
+  COIN: "\u{1FA99}",
+  CHART: "\u{1F4CA}",
+  TARGET: "\u{1F3AF}",
+  EDU: "\u{1F393}",
+  TRASH: "\u{1F5D1}\uFE0F",
 };
 
+const BASE_EXPENSE_CATEGORIES = [
+  { key: "food", name: "Food", icon: ICONS.FOOD },
+  { key: "breakfast", name: "Breakfast", icon: ICONS.BREAKFAST },
+  { key: "lunch", name: "Lunch", icon: ICONS.LUNCH },
+  { key: "dinner", name: "Dinner", icon: ICONS.DINNER },
+  { key: "snack", name: "Snack", icon: ICONS.SNACK },
+  { key: "drinks", name: "Drinks", icon: ICONS.DRINKS },
+  { key: "transport", name: "Transport", icon: ICONS.TRANSPORT },
+  { key: "shopping", name: "Shopping", icon: ICONS.SHOPPING },
+  { key: "gift", name: "Gift", icon: ICONS.GIFT },
+  { key: "rent", name: "Rent", icon: ICONS.RENT },
+  { key: "utilities", name: "Utilities", icon: ICONS.UTILITIES },
+  { key: "health", name: "Health", icon: ICONS.HEALTH },
+  { key: "others", name: "Others", icon: ICONS.BOX },
+];
+
+const BASE_INCOME_CATEGORIES = [
+  { key: "salary", name: "Salary", icon: ICONS.SALARY },
+  { key: "allowance", name: "Allowance", icon: ICONS.ALLOWANCE },
+  { key: "bonus", name: "Bonus", icon: ICONS.BONUS },
+  { key: "freelance", name: "Freelance", icon: ICONS.FREELANCE },
+  { key: "investment", name: "Investment", icon: ICONS.INVESTMENT },
+  { key: "refund", name: "Refund", icon: ICONS.REFUND },
+  { key: "others", name: "Others", icon: ICONS.BOX },
+];
+
+const PROTECTED_EXPENSE_NAMES = new Set(
+  BASE_EXPENSE_CATEGORIES.map((item) => item.name.toLowerCase())
+);
+const PROTECTED_INCOME_NAMES = new Set(
+  BASE_INCOME_CATEGORIES.map((item) => item.name.toLowerCase())
+);
+
 const EXPENSE_ICON_CHOICES = [
-  "🍜", "☕", "🍔", "🍕", "🛍️", "🎁", "🚌", "🎮", "🎵", "🏠", "📱", "🧾",
+  ICONS.FOOD,
+  ICONS.BREAKFAST,
+  ICONS.LUNCH,
+  ICONS.DINNER,
+  ICONS.SNACK,
+  ICONS.DRINKS,
+  ICONS.PIZZA,
+  ICONS.TRANSPORT,
+  ICONS.TAXI,
+  ICONS.SHOPPING,
+  ICONS.GIFT,
+  ICONS.RENT,
+  ICONS.UTILITIES,
+  ICONS.HEALTH,
+  ICONS.PHONE,
+  ICONS.GAME,
+  ICONS.MUSIC,
+  ICONS.BOX,
 ];
 
 const INCOME_ICON_CHOICES = [
-  "💼", "💰", "💸", "🏦", "📈", "🪙", "💳", "🧠", "🎯", "🧾", "🛠️", "🏆", "🎓", "👔", "📊",
+  ICONS.SALARY,
+  ICONS.ALLOWANCE,
+  ICONS.BONUS,
+  ICONS.FREELANCE,
+  ICONS.INVESTMENT,
+  ICONS.REFUND,
+  ICONS.BANK,
+  ICONS.COIN,
+  ICONS.CHART,
+  ICONS.TARGET,
+  ICONS.EDU,
+  ICONS.BOX,
 ];
 
-function iconForCategory(name, customIcon) {
-  if (customIcon) return customIcon;
-  const key = String(name || "").toLowerCase();
-  if (CATEGORY_ICON_MAP[key]) return CATEGORY_ICON_MAP[key];
-  return "🧾";
-}
+const LOCALIZED_BASE_LABELS = {
+  en: {
+    food: "Food",
+    breakfast: "Breakfast",
+    lunch: "Lunch",
+    dinner: "Dinner",
+    snack: "Snack",
+    drinks: "Drinks",
+    transport: "Transport",
+    shopping: "Shopping",
+    gift: "Gift",
+    rent: "Rent",
+    utilities: "Utilities",
+    health: "Health",
+    others: "Others",
+    salary: "Salary",
+    allowance: "Allowance",
+    bonus: "Bonus",
+    freelance: "Freelance",
+    investment: "Investment",
+    refund: "Refund",
+  },
+  zh: {
+    food: "\u98df\u7269",
+    breakfast: "\u65e9\u9910",
+    lunch: "\u5348\u9910",
+    dinner: "\u665a\u9910",
+    snack: "\u96f6\u98df",
+    drinks: "\u996e\u6599",
+    transport: "\u4ea4\u901a",
+    shopping: "\u8d2d\u7269",
+    gift: "\u793c\u7269",
+    rent: "\u623f\u79df",
+    utilities: "\u6c34\u7535",
+    health: "\u533b\u7597",
+    others: "\u5176\u4ed6",
+    salary: "\u85aa\u8d44",
+    allowance: "\u6d25\u8d34",
+    bonus: "\u5956\u91d1",
+    freelance: "\u517c\u804c",
+    investment: "\u6295\u8d44",
+    refund: "\u9000\u6b3e",
+  },
+  ms: {
+    food: "Makanan",
+    breakfast: "Sarapan",
+    lunch: "Makan Tengah Hari",
+    dinner: "Makan Malam",
+    snack: "Snek",
+    drinks: "Minuman",
+    transport: "Pengangkutan",
+    shopping: "Membeli-belah",
+    gift: "Hadiah",
+    rent: "Sewa",
+    utilities: "Utiliti",
+    health: "Kesihatan",
+    others: "Lain-lain",
+    salary: "Gaji",
+    allowance: "Elaun",
+    bonus: "Bonus",
+    freelance: "Freelance",
+    investment: "Pelaburan",
+    refund: "Pulangan",
+  },
+};
 
 function parseApiError(error, fallback) {
   return error?.message || fallback;
 }
 
+function normalizeName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isCorruptIcon(icon) {
+  const value = String(icon || "");
+  if (!value) return true;
+  if (value.includes("?")) return true;
+  if (!/\p{Extended_Pictographic}/u.test(value)) return true;
+  return false;
+}
+
+function sanitizeIcon(icon) {
+  return isCorruptIcon(icon) ? "" : String(icon);
+}
+
+function getBaseForType(type) {
+  return type === "income" ? BASE_INCOME_CATEGORIES : BASE_EXPENSE_CATEGORIES;
+}
+
+function getLocalizedBaseName(language, key, fallback) {
+  return LOCALIZED_BASE_LABELS[language]?.[key] || fallback;
+}
+
+function isProtectedCategory(type, name) {
+  const normalized = normalizeName(name);
+  return type === "income"
+    ? PROTECTED_INCOME_NAMES.has(normalized)
+    : PROTECTED_EXPENSE_NAMES.has(normalized);
+}
+
+function buildCategoryRows(rawRows) {
+  const rows = [];
+  const present = { expense: new Set(), income: new Set() };
+
+  for (const row of rawRows) {
+    const safeType = row.type === "income" ? "income" : "expense";
+    const baseCatalog = getBaseForType(safeType);
+    const match = baseCatalog.find((base) => normalizeName(base.name) === normalizeName(row.name));
+    const item = {
+      ...row,
+      name: String(row.name || "").trim(),
+      type: safeType,
+      icon: sanitizeIcon(row.icon) || match?.icon || ICONS.BOX,
+      baseKey: match?.key || null,
+      isDefault: Boolean(match || isProtectedCategory(safeType, row.name)),
+      isCustom: false,
+    };
+    rows.push(item);
+    present[item.type].add(normalizeName(item.name));
+  }
+
+  for (const base of BASE_EXPENSE_CATEGORIES) {
+    if (!present.expense.has(normalizeName(base.name))) {
+      rows.push({
+        id: `default-expense-${base.key}`,
+        name: base.name,
+        type: "expense",
+        icon: base.icon,
+        baseKey: base.key,
+        isDefault: true,
+        isCustom: false,
+      });
+    }
+  }
+
+  for (const base of BASE_INCOME_CATEGORIES) {
+    if (!present.income.has(normalizeName(base.name))) {
+      rows.push({
+        id: `default-income-${base.key}`,
+        name: base.name,
+        type: "income",
+        icon: base.icon,
+        baseKey: base.key,
+        isDefault: true,
+        isCustom: false,
+      });
+    }
+  }
+
+  return rows;
+}
+
 export function TransactionScreen({ recordId }) {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
   const [mode, setMode] = useState("expense");
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
-  const [transactionDate, setTransactionDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
-  
-  // 🚀 AI Fix: 默认设为空，让 AI 有机会介入
+  const [transactionDate, setTransactionDate] = useState(new Date().toISOString().slice(0, 10));
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  
   const [categories, setCategories] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -65,6 +288,13 @@ export function TransactionScreen({ recordId }) {
     () => categories.filter((item) => item.type === mode),
     [categories, mode]
   );
+  const selectedCategory = categories.find((item) => item.id === selectedCategoryId) || null;
+  const canDeleteSelectedCategory = Boolean(
+    selectedCategory &&
+      (selectedCategory.isCustom ||
+        (!selectedCategory.isDefault &&
+          !isProtectedCategory(selectedCategory.type, selectedCategory.name)))
+  );
   const customIconChoices = mode === "income" ? INCOME_ICON_CHOICES : EXPENSE_ICON_CHOICES;
   const pageBackgroundClass =
     mode === "income"
@@ -77,12 +307,7 @@ export function TransactionScreen({ recordId }) {
     if (!response.ok) {
       throw new Error(payload.message || t.transactions.loadCategoriesFailed);
     }
-
-    const rows = (payload.data || []).map((item) => ({
-      ...item,
-      icon: item.icon || CATEGORY_ICON_MAP[String(item.name || "").toLowerCase()] || "🧾",
-    }));
-    setCategories(rows);
+    setCategories(buildCategoryRows(payload.data || []));
   }
 
   async function loadRecord(id) {
@@ -92,7 +317,7 @@ export function TransactionScreen({ recordId }) {
       throw new Error(payload.message || t.transactions.loadRecordFailed);
     }
     const row = payload.data;
-    setMode(row.type);
+    setMode(row.type === "income" ? "income" : "expense");
     setTitle(row.title || "");
     setAmount(String(row.amount ?? ""));
     setTransactionDate(new Date(row.transactionDate).toISOString().slice(0, 10));
@@ -104,9 +329,7 @@ export function TransactionScreen({ recordId }) {
       setError("");
       try {
         await loadCategoriesAndDefaults();
-        if (recordId) {
-          await loadRecord(recordId);
-        }
+        if (recordId) await loadRecord(recordId);
       } catch (requestError) {
         setError(parseApiError(requestError, t.transactions.initFailed));
       } finally {
@@ -118,14 +341,19 @@ export function TransactionScreen({ recordId }) {
   }, [recordId]);
 
   useEffect(() => {
+    if (!isEditing) return;
+    if (!selectedCategoryId && filteredCategories.length > 0) {
+      setSelectedCategoryId(filteredCategories[0].id);
+      return;
+    }
     if (
       selectedCategoryId &&
       filteredCategories.length > 0 &&
       !filteredCategories.some((item) => item.id === selectedCategoryId)
     ) {
-      setSelectedCategoryId("");
+      setSelectedCategoryId(filteredCategories[0].id);
     }
-  }, [filteredCategories, selectedCategoryId]);
+  }, [filteredCategories, selectedCategoryId, isEditing]);
 
   function openCategoryCreator() {
     setNewCategoryName("");
@@ -141,6 +369,8 @@ export function TransactionScreen({ recordId }) {
       name: newCategoryName.trim(),
       type: mode,
       icon: newCategoryIcon,
+      baseKey: null,
+      isDefault: false,
       isCustom: true,
     };
     setCategories((prev) => [...prev, next]);
@@ -153,36 +383,30 @@ export function TransactionScreen({ recordId }) {
     setError("");
     setSuccess("");
 
-    // 🚀 AI Fix: 如果没选 Category，必须要有 Title 给 AI 猜
-    if (!selectedCategoryId && !title.trim()) {
-      setError("Please enter a Record title for AI auto-detect, or select a category manually.");
+    const category = selectedCategoryId
+      ? categories.find((item) => item.id === selectedCategoryId)
+      : null;
+    if (selectedCategoryId && !category) {
+      setError(t.transactions.categoryNotFound);
+      return;
+    }
+    if (!title.trim() && !category) {
+      setError("Please enter a title.");
       return;
     }
 
     const payload = {
-      title: title.trim(),
+      title: title.trim() || category?.name || "",
       amount: Number(amount),
       type: mode,
       transactionDate,
       note: null,
+      ...(category
+        ? category.id.startsWith("default-") || category.isCustom
+          ? { categoryName: category.name, categoryIcon: category.icon || null }
+          : { categoryId: category.id }
+        : {}),
     };
-
-    if (selectedCategoryId) {
-      const category = categories.find((item) => item.id === selectedCategoryId);
-      if (!category) {
-        setError(t.transactions.categoryNotFound);
-        return;
-      }
-      
-      payload.title = payload.title || category.name;
-      
-      if (category.isCustom || category.id.startsWith("default-")) {
-        payload.categoryName = category.name;
-        payload.categoryIcon = category.icon || null;
-      } else {
-        payload.categoryId = category.id;
-      }
-    }
 
     setIsSaving(true);
     try {
@@ -197,12 +421,8 @@ export function TransactionScreen({ recordId }) {
       if (!response.ok) {
         throw new Error(result.message || t.transactions.saveFailed);
       }
-
       setSuccess(isEditing ? t.transactions.recordUpdated : t.transactions.recordAdded);
-      if (!isEditing) {
-        setAmount("");
-        setTitle("");
-      }
+      if (!isEditing) setAmount("");
       router.push("/");
       router.refresh();
     } catch (requestError) {
@@ -217,9 +437,7 @@ export function TransactionScreen({ recordId }) {
     setIsDeleting(true);
     setError("");
     try {
-      const response = await fetch(`/api/transactions/${recordId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(`/api/transactions/${recordId}`, { method: "DELETE" });
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.message || t.transactions.deleteFailed);
@@ -235,17 +453,27 @@ export function TransactionScreen({ recordId }) {
   }
 
   async function handleDeleteCategoryConfirmed() {
-    if (!selectedCategoryId) return;
+    if (!selectedCategoryId || !canDeleteSelectedCategory) return;
     const category = categories.find((item) => item.id === selectedCategoryId);
     if (!category) return;
 
+    if (String(category.id).startsWith("custom-")) {
+      setCategories((prev) => prev.filter((item) => item.id !== category.id));
+      setShowDeleteCategoryConfirm(false);
+      setSelectedCategoryId("");
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/categories/${category.id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(`/api/categories/${category.id}`, { method: "DELETE" });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.message || t.transactions.deleteCategoryFailed);
+        const message = payload.message || t.transactions.deleteCategoryFailed;
+        if (message.includes("Basic category cannot be deleted")) {
+          setShowDeleteCategoryConfirm(false);
+          return;
+        }
+        throw new Error(message);
       }
       setShowDeleteCategoryConfirm(false);
       setSelectedCategoryId("");
@@ -272,6 +500,7 @@ export function TransactionScreen({ recordId }) {
       <div className="mx-auto w-full max-w-3xl space-y-5">
         <header className="flex items-center justify-between">
           <BackButton fallbackHref="/" preferFallback />
+
           <div className="rounded-2xl border-2 border-slate-900 bg-white p-1">
             <button
               type="button"
@@ -302,7 +531,7 @@ export function TransactionScreen({ recordId }) {
               aria-label={t.transactions.deleteRecord}
               title={t.transactions.deleteRecord}
             >
-              🗑️
+              {ICONS.TRASH}
             </button>
           ) : (
             <div className="w-8" />
@@ -320,27 +549,35 @@ export function TransactionScreen({ recordId }) {
               <span className="text-2xl">+</span>
               <span className="text-xs font-semibold text-slate-700">{t.transactions.add}</span>
             </button>
-            {filteredCategories.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setSelectedCategoryId(item.id)}
-                className={`flex flex-col items-center justify-center gap-1 rounded-2xl border py-2 text-2xl ${
-                  selectedCategoryId === item.id
-                    ? "border-slate-900 bg-amber-100"
-                    : "border-slate-300 bg-white"
-                }`}
-                title={item.name}
-                aria-label={item.name}
-              >
-                <span>{iconForCategory(item.name, item.icon)}</span>
-                <span className="line-clamp-1 text-xs font-semibold text-slate-700">
-                  {item.name}
-                </span>
-              </button>
-            ))}
+
+            {filteredCategories.map((item) => {
+              const selected = selectedCategoryId === item.id;
+              const selectedClass =
+                mode === "income"
+                  ? "border-slate-900 bg-cyan-100"
+                  : "border-slate-900 bg-amber-100";
+              const label = item.baseKey
+                ? getLocalizedBaseName(language, item.baseKey, item.name)
+                : item.name;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedCategoryId(item.id)}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-2xl border py-2 text-2xl ${
+                    selected ? selectedClass : "border-slate-300 bg-white"
+                  }`}
+                  title={label}
+                >
+                  <span>{sanitizeIcon(item.icon) || ICONS.BOX}</span>
+                  <span className="line-clamp-1 text-xs font-semibold text-slate-700">{label}</span>
+                </button>
+              );
+            })}
           </div>
-          {selectedCategoryId ? (
+
+          {canDeleteSelectedCategory ? (
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
@@ -353,10 +590,7 @@ export function TransactionScreen({ recordId }) {
           ) : null}
         </section>
 
-        <form
-          className="space-y-4 rounded-3xl border-2 border-slate-900 bg-white p-5"
-          onSubmit={handleSubmit}
-        >
+        <form className="space-y-4 rounded-3xl border-2 border-slate-900 bg-white p-5" onSubmit={handleSubmit}>
           <div className="grid gap-3 sm:grid-cols-2">
             <input
               type="date"
@@ -377,7 +611,7 @@ export function TransactionScreen({ recordId }) {
               required
             />
           </div>
-          
+
           <input
             type="text"
             value={title}
@@ -391,19 +625,14 @@ export function TransactionScreen({ recordId }) {
             disabled={isSaving}
             className="w-full rounded-2xl bg-cyan-500 px-4 py-3 text-lg font-semibold text-white transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving
-              ? t.transactions.saving
-              : isEditing
-                ? t.transactions.updateRecord
-                : t.transactions.addRecord}
+            {isSaving ? t.transactions.saving : isEditing ? t.transactions.updateRecord : t.transactions.addRecord}
           </button>
         </form>
 
         {error ? (
-          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </p>
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
         ) : null}
+
         {success ? (
           <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
             {success}
@@ -411,7 +640,6 @@ export function TransactionScreen({ recordId }) {
         ) : null}
       </div>
 
-      {/* ... [后面的 Modals 代码保持不变] ... */}
       {showCategoryCreator ? (
         <div className="fixed inset-0 z-40 bg-white">
           <div className={`min-h-screen ${pageBackgroundClass} px-4 py-6 text-slate-900 sm:px-6`}>
@@ -423,7 +651,7 @@ export function TransactionScreen({ recordId }) {
                   className="text-3xl leading-none"
                   aria-label={t.common.back}
                 >
-                  ←
+                  {"\u2190"}
                 </button>
                 <h2 className="text-3xl font-semibold">{t.transactions.newCategory}</h2>
                 <div className="w-8" />
@@ -443,21 +671,25 @@ export function TransactionScreen({ recordId }) {
               </section>
 
               <section className="rounded-3xl border-2 border-slate-900 bg-white p-4">
-                <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
-                  {customIconChoices.map((icon) => (
-                    <button
-                      key={icon}
-                      type="button"
-                      onClick={() => setNewCategoryIcon(icon)}
-                      className={`flex h-14 items-center justify-center rounded-2xl border text-2xl ${
-                        newCategoryIcon === icon
-                          ? "border-slate-900 bg-amber-100"
-                          : "border-slate-300 bg-white"
-                      }`}
-                    >
-                      {icon}
-                    </button>
-                  ))}
+                <div className="max-h-72 overflow-y-auto">
+                  <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+                    {customIconChoices.map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => setNewCategoryIcon(icon)}
+                        className={`flex h-14 items-center justify-center rounded-2xl border text-2xl ${
+                          newCategoryIcon === icon
+                            ? mode === "income"
+                              ? "border-slate-900 bg-cyan-100"
+                              : "border-slate-900 bg-amber-100"
+                            : "border-slate-300 bg-white"
+                        }`}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </section>
 
@@ -502,9 +734,7 @@ export function TransactionScreen({ recordId }) {
       {showDeleteCategoryConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="w-full max-w-sm rounded-3xl border-2 border-slate-900 bg-white p-5">
-            <h3 className="text-xl font-semibold text-slate-900">
-              {t.transactions.deleteCategoryTitle}
-            </h3>
+            <h3 className="text-xl font-semibold text-slate-900">{t.transactions.deleteCategoryTitle}</h3>
             <p className="mt-2 text-sm text-slate-600">{t.transactions.deleteCategoryDesc}</p>
             <div className="mt-5 flex gap-3">
               <button

@@ -1,14 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BackButton } from "@/components/back-button";
 import { LogoutButton } from "@/components/logout-button";
 import { fetchProfile, updateProfile } from "@/services/auth-api";
+import { fetchTransactions } from "@/services/transaction-api";
 import { useLanguage } from "@/hooks/use-language";
+import { formatCurrency } from "@/utils/format";
+
+const LOCALE_BY_LANGUAGE = {
+  en: "en-US",
+  zh: "zh-CN",
+  ms: "ms-MY",
+};
+
+function dateValue(date, language) {
+  const locale = LOCALE_BY_LANGUAGE[language] || "en-US";
+  return new Date(date).toLocaleDateString(locale, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 export default function ProfilePage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [profile, setProfile] = useState(null);
+  const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -16,13 +34,17 @@ export default function ProfilePage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  async function loadProfile() {
+  async function loadAll() {
     setIsLoading(true);
     setError("");
     try {
-      const result = await fetchProfile();
-      setProfile(result.user);
-      setUsername(result.user.username);
+      const [profileResult, txnRows] = await Promise.all([
+        fetchProfile(),
+        fetchTransactions({ limit: 300 }),
+      ]);
+      setProfile(profileResult.user);
+      setUsername(profileResult.user.username);
+      setRows(txnRows || []);
     } catch (requestError) {
       setError(requestError.message || t.profile.loadFailed);
     } finally {
@@ -31,9 +53,29 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
-    loadProfile();
+    loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const incomeRows = useMemo(() => {
+    return rows
+      .filter((item) => item.type === "income")
+      .sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+  }, [rows]);
+
+  const expenseRows = useMemo(() => {
+    return rows
+      .filter((item) => item.type === "expense")
+      .sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate));
+  }, [rows]);
+
+  const incomeTotal = useMemo(() => {
+    return incomeRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  }, [incomeRows]);
+
+  const expenseTotal = useMemo(() => {
+    return expenseRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  }, [expenseRows]);
 
   async function handleSave(event) {
     event.preventDefault();
@@ -47,7 +89,7 @@ export default function ProfilePage() {
       });
       setPassword("");
       setSuccess(t.profile.updated);
-      await loadProfile();
+      await loadAll();
     } catch (requestError) {
       setError(requestError.message || t.profile.updateFailed);
     } finally {
@@ -58,7 +100,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe_0%,#f8fafc_38%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
-        <div className="mx-auto w-full max-w-4xl">
+        <div className="mx-auto w-full max-w-5xl">
           <BackButton fallbackHref="/" />
           <p className="mt-6 text-sm text-slate-600">{t.profile.loadingProfile}</p>
         </div>
@@ -68,24 +110,51 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe_0%,#f8fafc_38%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
-      <div className="mx-auto w-full max-w-4xl space-y-6">
+      <div className="mx-auto w-full max-w-5xl space-y-6">
         <BackButton fallbackHref="/" />
 
         <section className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)]">
-          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-700">
-            {t.profile.title}
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
-            {profile?.username}
-          </h1>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-700">
+                {t.profile.title}
+              </p>
+              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">
+                {profile?.username}
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                {(t.profile.memberSince || "Member since")}{" "}
+                {profile?.createdAt ? dateValue(profile.createdAt, language) : "-"}
+              </p>
+            </div>
+            <LogoutButton />
+          </div>
 
-          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              {t.profile.transactions}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {profile?.transactionCount || 0}
-            </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                {t.profile.transactions}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {profile?.transactionCount || 0}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-cyan-700">
+                {t.profile.totalIncome || "Total income"}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {formatCurrency(incomeTotal, "RM")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
+                {t.profile.totalExpense || "Total expense"}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {formatCurrency(expenseTotal, "RM")}
+              </p>
+            </div>
           </div>
 
           <form className="mt-6 space-y-4" onSubmit={handleSave}>
@@ -123,10 +192,48 @@ export default function ProfilePage() {
               {success}
             </p>
           ) : null}
+        </section>
 
-          <div className="mt-6">
-            <LogoutButton />
-          </div>
+        <section className="grid gap-5 md:grid-cols-2">
+          <article className="rounded-3xl border border-cyan-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">
+              {t.profile.incomeTransactions || "Income transactions"}
+            </h2>
+            <div className="mt-3 space-y-2">
+              {incomeRows.slice(0, 8).map((row) => (
+                <div key={row.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{row.title}</p>
+                    <p className="text-xs text-slate-500">{dateValue(row.transactionDate, language)}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-cyan-700">+{formatCurrency(row.amount, "RM")}</p>
+                </div>
+              ))}
+              {incomeRows.length === 0 ? (
+                <p className="text-sm text-slate-500">{t.profile.noIncomeTransactions || "No income transactions yet."}</p>
+              ) : null}
+            </div>
+          </article>
+
+          <article className="rounded-3xl border border-amber-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">
+              {t.profile.expenseTransactions || "Expense transactions"}
+            </h2>
+            <div className="mt-3 space-y-2">
+              {expenseRows.slice(0, 8).map((row) => (
+                <div key={row.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{row.title}</p>
+                    <p className="text-xs text-slate-500">{dateValue(row.transactionDate, language)}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-amber-700">-{formatCurrency(row.amount, "RM")}</p>
+                </div>
+              ))}
+              {expenseRows.length === 0 ? (
+                <p className="text-sm text-slate-500">{t.profile.noExpenseTransactions || "No expense transactions yet."}</p>
+              ) : null}
+            </div>
+          </article>
         </section>
       </div>
     </main>

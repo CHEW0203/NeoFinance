@@ -1,23 +1,67 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { BalancePie } from "@/features/dashboard/components/balance-pie";
 import { TopNav } from "@/features/dashboard/components/top-nav";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
 import { getLocaleFromLanguage } from "@/lib/i18n";
+import { getLocalizedCategoryLabel } from "@/lib/i18n/category-labels";
 import { getServerDictionary } from "@/lib/i18n/server";
 import { formatCurrency } from "@/utils/format";
 
+const ICONS = {
+  BREAKFAST: "\u{1F373}",
+  LUNCH: "\u{1F35C}",
+  DINNER: "\u{1F37D}\uFE0F",
+  FOOD: "\u{1F354}",
+  SNACK: "\u{1F36A}",
+  DRINKS: "\u{1F964}",
+  TRANSPORT: "\u{1F68C}",
+  GIFT: "\u{1F381}",
+  SHOPPING: "\u{1F6CD}\uFE0F",
+  RENT: "\u{1F3E0}",
+  UTILITIES: "\u{1F4A1}",
+  HEALTH: "\u{1F48A}",
+  SALARY: "\u{1F4BC}",
+  ALLOWANCE: "\u{1F4B0}",
+  BONUS: "\u{1F3C6}",
+  FREELANCE: "\u{1F4BB}",
+  INVESTMENT: "\u{1F4C8}",
+  REFUND: "\u{1F4B3}",
+  BOX: "\u{1F4E6}",
+};
+
+function isCorruptIcon(icon) {
+  const value = String(icon || "");
+  if (!value) return true;
+  if (value.includes("?")) return true;
+  if (!/\p{Extended_Pictographic}/u.test(value)) return true;
+  return false;
+}
+
 function categoryIcon(category) {
-  if (category?.icon) return category.icon;
+  const rawIcon = String(category?.icon || "");
+  if (!isCorruptIcon(rawIcon)) return rawIcon;
+
   const value = String(category?.name || "").toLowerCase();
-  if (value.includes("salary")) return "ðŸ’¼";
-  if (value.includes("allowance")) return "ðŸ’°";
-  if (value.includes("bonus")) return "ðŸ†";
-  if (value.includes("income")) return "ðŸ“ˆ";
-  if (value.includes("food")) return "ðŸœ";
-  if (value.includes("transport")) return "ðŸšŒ";
-  if (value.includes("gift")) return "ðŸŽ";
-  if (category?.type === "income") return "ðŸ’¼";
-  return "ðŸ“¦";
+  if (value.includes("breakfast")) return ICONS.BREAKFAST;
+  if (value.includes("lunch")) return ICONS.LUNCH;
+  if (value.includes("dinner")) return ICONS.DINNER;
+  if (value.includes("food")) return ICONS.FOOD;
+  if (value.includes("snack")) return ICONS.SNACK;
+  if (value.includes("drink")) return ICONS.DRINKS;
+  if (value.includes("transport")) return ICONS.TRANSPORT;
+  if (value.includes("gift")) return ICONS.GIFT;
+  if (value.includes("shopping")) return ICONS.SHOPPING;
+  if (value.includes("rent")) return ICONS.RENT;
+  if (value.includes("utility")) return ICONS.UTILITIES;
+  if (value.includes("health")) return ICONS.HEALTH;
+  if (value.includes("salary")) return ICONS.SALARY;
+  if (value.includes("allowance")) return ICONS.ALLOWANCE;
+  if (value.includes("bonus")) return ICONS.BONUS;
+  if (value.includes("freelance")) return ICONS.FREELANCE;
+  if (value.includes("investment")) return ICONS.INVESTMENT;
+  if (value.includes("refund")) return ICONS.REFUND;
+  if (category?.type === "income") return ICONS.SALARY;
+  return ICONS.BOX;
 }
 
 export default async function Home() {
@@ -65,12 +109,15 @@ export default async function Home() {
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
         <TopNav monthLabel={monthLabel} currentUser={currentUser} />
 
-        <div className="dashboard-main">        <div className="flex flex-col items-center justify-center gap-5">
+        <div className="flex flex-col items-center justify-center gap-5">
           <BalancePie
             totalBalance={stats.totalBalance}
             monthlyExpense={stats.monthlyExpense}
+            monthlyIncome={stats.monthlyIncome}
             currency={stats.currency === "MYR" ? "RM" : stats.currency}
             labels={t.dashboard}
+            expenseHref="/report?type=expense"
+            incomeHref="/report?type=income"
           />
 
           <Link
@@ -124,7 +171,9 @@ export default async function Home() {
                         </div>
                         <div>
                           <p className="font-semibold text-slate-900">
-                            {item.category?.name || t.dashboard.others}
+                            {item.category?.name
+                              ? getLocalizedCategoryLabel(item.category.name, language)
+                              : t.dashboard.others}
                           </p>
                           <p className="text-sm text-slate-500">{item.title}</p>
                         </div>
@@ -140,12 +189,7 @@ export default async function Home() {
             );
           })}
         </section>
-        </div>
       </section>
     </main>
   );
 }
-
-
-
-

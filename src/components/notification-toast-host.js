@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/hooks/use-language";
 
@@ -91,9 +91,24 @@ function playDingDong() {
 export function NotificationToastHost() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [queue, setQueue] = useState([]);
   const [active, setActive] = useState(null);
+  const activeRef = useRef(null);
+  const queueRef = useRef([]);
   const lastCountRef = useRef(0);
+
+  const showToast = useCallback((nextToast) => {
+    activeRef.current = nextToast;
+    setActive(nextToast);
+  }, []);
+
+  const dismissActiveAndShowNext = useCallback(() => {
+    activeRef.current = null;
+    setActive(null);
+    const next = queueRef.current.shift();
+    if (next) {
+      showToast(next);
+    }
+  }, [showToast]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -123,7 +138,15 @@ export function NotificationToastHost() {
       const incoming = list.slice(lastCountRef.current).filter((item) => !item?.isRead);
       lastCountRef.current = list.length;
       if (incoming.length > 0) {
-        setQueue((prev) => [...prev, ...incoming]);
+        if (!activeRef.current) {
+          const [first, ...rest] = incoming;
+          showToast(first);
+          if (rest.length > 0) {
+            queueRef.current.push(...rest);
+          }
+        } else {
+          queueRef.current.push(...incoming);
+        }
       }
     };
 
@@ -143,22 +166,16 @@ export function NotificationToastHost() {
       clearInterval(interval);
       window.removeEventListener("storage", handleStorage);
     };
-  }, []);
-
-  useEffect(() => {
-    if (active || queue.length === 0) return;
-    setActive(queue[0]);
-    setQueue((prev) => prev.slice(1));
-  }, [active, queue]);
+  }, [showToast]);
 
   useEffect(() => {
     if (!active) return;
     playDingDong();
     const timer = setTimeout(() => {
-      setActive(null);
+      dismissActiveAndShowNext();
     }, TOAST_DURATION);
     return () => clearTimeout(timer);
-  }, [active]);
+  }, [active, dismissActiveAndShowNext]);
 
   if (!active) return null;
 
@@ -166,11 +183,11 @@ export function NotificationToastHost() {
   const message = active.message || "";
 
   function handleCancel() {
-    setActive(null);
+    dismissActiveAndShowNext();
   }
 
   function handleDetails() {
-    setActive(null);
+    dismissActiveAndShowNext();
     router.push("/notifications");
   }
 

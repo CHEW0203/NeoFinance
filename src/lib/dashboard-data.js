@@ -10,6 +10,7 @@ export async function getDashboardSnapshot() {
   if (!user) {
     return null;
   }
+  const monthStart = startOfMonth();
 
   const userWithData = await prisma.user.findUnique({
     where: { id: user.id },
@@ -25,8 +26,13 @@ export async function getDashboardSnapshot() {
         },
       },
       transactions: {
+        where: {
+          transactionDate: {
+            gte: monthStart,
+          },
+        },
         orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
-        take: 30,
+        take: 500,
         select: {
           id: true,
           type: true,
@@ -54,9 +60,7 @@ export async function getDashboardSnapshot() {
     0
   );
 
-  const monthlyTransactions = userWithData.transactions.filter(
-    (row) => row.transactionDate >= startOfMonth()
-  );
+  const monthlyTransactions = userWithData.transactions;
 
   const monthlyIncome = monthlyTransactions
     .filter((row) => row.type === "income")
@@ -77,6 +81,6 @@ export async function getDashboardSnapshot() {
       monthlyExpense,
       currency: userWithData.accounts[0]?.currency || "MYR",
     },
-    recentTransactions: userWithData.transactions,
+    recentTransactions: monthlyTransactions,
   };
 }

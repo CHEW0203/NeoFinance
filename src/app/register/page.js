@@ -20,10 +20,10 @@ export default function RegisterPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dcfce7_0%,#f8fafc_35%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
       <div className="mx-auto w-full max-w-3xl rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.45)] backdrop-blur">
         <BackButton fallbackHref="/login" />
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-700">
+        <p className="text-lg font-semibold uppercase tracking-[0.28em] text-emerald-700">
           {t.auth.createTitle}
         </p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-slate-950">
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950">
           {t.auth.createDesc}
         </h1>
 
@@ -35,7 +35,7 @@ export default function RegisterPage() {
             onChange={(event) =>
               setForm((prev) => ({ ...prev, username: event.target.value }))
             }
-            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-600 md:col-span-2"
+            className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-[13px] outline-none focus:border-emerald-600 md:col-span-2"
             required
           />
           <div className="relative">
@@ -46,7 +46,7 @@ export default function RegisterPage() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, password: event.target.value }))
               }
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm outline-none focus:border-emerald-600"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-[13px] outline-none focus:border-emerald-600"
               required
             />
             <button
@@ -88,7 +88,7 @@ export default function RegisterPage() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
               }
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-sm outline-none focus:border-emerald-600"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-[13px] outline-none focus:border-emerald-600"
               required
             />
             <button
@@ -130,7 +130,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
+            className="rounded-2xl bg-indigo-600 px-4 py-3 text-[13px] font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
           >
             {isSubmitting ? t.auth.creatingAccount : t.auth.createAccount}
           </button>
@@ -142,7 +142,7 @@ export default function RegisterPage() {
           </p>
         ) : null}
 
-        <p className="mt-6 text-sm text-slate-600">
+        <p className="mt-6 text-[13px] text-slate-600">
           {t.auth.hasAccount}{" "}
           <Link href="/login" className="font-semibold text-emerald-700">
             {t.auth.loginHere}
