@@ -106,7 +106,7 @@
     },
     pages: {
       notifications: "Notifications",
-      notificationsInbox: "Peti Masuk",
+      notificationsInbox: "Inbox",
       notificationsStories: "Stories",
       newNotification: "New notification",
       noNotification: "No notification yet.",
@@ -796,7 +796,7 @@
     },
     pages: {
       notifications: "Notifikasi",
-      notificationsInbox: "Inbox",
+      notificationsInbox: "Peti Masuk",
       notificationsStories: "Cerita",
       newNotification: "Notifikasi baru",
       noNotification: "Belum ada notifikasi.",
