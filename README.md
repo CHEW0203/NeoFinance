@@ -191,7 +191,7 @@ All final product logic, design decisions, and validations remain controlled by 
 
 ```text
 NeoFinance/
-├─ vscode/                  # VS Code workspace settings, including Prisma extension and tooling preferences
+├─ .vscode/                  # VS Code workspace settings, including Prisma extension and tooling preferences
 ├─ prisma/                  # Prisma schema, local DB, seed script
 ├─ public/                  # Static assets and app icon
 ├─ src/
