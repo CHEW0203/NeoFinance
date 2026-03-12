@@ -303,12 +303,49 @@ export default function ReportPage() {
   const [questionInput, setQuestionInput] = useState("");
   const [answerText, setAnswerText] = useState("");
   const [isQuestionLoading, setIsQuestionLoading] = useState(false);
+  const [forecastData, setForecastData] = useState(null);
+  const [isForecastLoading, setIsForecastLoading] = useState(false);
+  const [forecastError, setForecastError] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const storedPersona = window.localStorage.getItem(PERSONA_KEY) || "";
     setPersonaPrompt(storedPersona);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadForecast() {
+      setIsForecastLoading(true);
+      setForecastError("");
+      try {
+        const response = await fetch(`/api/forecast?lang=${encodeURIComponent(language)}`, {
+          cache: "no-store",
+          credentials: "include",
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || "Failed to load forecast.");
+        }
+        if (!cancelled) {
+          setForecastData(payload.data || null);
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setForecastError(requestError.message || "Failed to load forecast.");
+          setForecastData(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsForecastLoading(false);
+        }
+      }
+    }
+    loadForecast();
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   const rangeLabel = useMemo(() => {
     if (range === "month") return t?.pages?.month1 || "1 Month";
@@ -622,6 +659,84 @@ export default function ReportPage() {
           </div>
         </section>
 
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">
+                {t?.forecast?.reportTitle || "AI Balance Forecast"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {t?.forecast?.reportDesc || "Predicted balance based on your recent spending and income pattern."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsForecastLoading(true);
+                setForecastError("");
+                try {
+                  const response = await fetch(`/api/forecast?lang=${encodeURIComponent(language)}`, {
+                    cache: "no-store",
+                    credentials: "include",
+                  });
+                  const payload = await response.json();
+                  if (!response.ok) {
+                    throw new Error(payload.message || "Failed to load forecast.");
+                  }
+                  setForecastData(payload.data || null);
+                } catch (requestError) {
+                  setForecastError(requestError.message || "Failed to load forecast.");
+                } finally {
+                  setIsForecastLoading(false);
+                }
+              }}
+              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900"
+            >
+              {t?.forecast?.refresh || "Refresh forecast"}
+            </button>
+          </div>
+
+          {isForecastLoading ? (
+            <p className="mt-4 text-sm text-slate-500">{t?.forecast?.loading || "Loading forecast..."}</p>
+          ) : forecastError ? (
+            <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              {forecastError}
+            </p>
+          ) : forecastData ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs uppercase tracking-[0.12em] text-slate-500">
+                  {t?.forecast?.currentBalance || "Current balance"}
+                </p>
+                <p className="mt-2 text-xl font-bold text-slate-900">
+                  {formatCurrency(forecastData.currentBalance, forecastData.currency || "RM")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+                <p className="text-xs uppercase tracking-[0.12em] text-cyan-700">
+                  {t?.forecast?.weekAhead || "7 Days"}
+                </p>
+                <p className="mt-2 text-xl font-bold text-slate-900">
+                  {formatCurrency(forecastData.forecast7, forecastData.currency || "RM")}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                <p className="text-xs uppercase tracking-[0.12em] text-indigo-700">
+                  {t?.forecast?.monthAhead || "30 Days"}
+                </p>
+                <p className="mt-2 text-xl font-bold text-slate-900">
+                  {formatCurrency(forecastData.forecast30, forecastData.currency || "RM")}
+                </p>
+              </div>
+              <div className="sm:col-span-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                {forecastData.aiSummary || t?.forecast?.fallback || "Forecast generated from your recent cashflow pattern."}
+              </div>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">{t?.forecast?.empty || "No forecast data yet."}</p>
+          )}
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">{typeLabels.summaryTitle}</h2>
@@ -771,7 +886,6 @@ export default function ReportPage() {
     </main>
   );
 }
-
 
 
 

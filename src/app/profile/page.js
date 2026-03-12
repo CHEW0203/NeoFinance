@@ -130,7 +130,7 @@ export default function ProfilePage() {
             <LogoutButton />
           </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <div className="mt-6 grid gap-4 md:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                 {t.profile.transactions}
@@ -153,6 +153,14 @@ export default function ProfilePage() {
               </p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">
                 {formatCurrency(expenseTotal, "RM")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">
+                {t.profile.savings || "Savings"}
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {formatCurrency(profile?.savingsAmount || 0, "RM")}
               </p>
             </div>
           </div>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BackButton } from "@/components/back-button";
 import { formatCurrency } from "@/utils/format";
 import { useLanguage } from "@/hooks/use-language";
 import { getLocaleFromLanguage } from "@/lib/i18n";
+import { getLocalDateKey } from "@/utils/date-key";
 
 function getMonthBounds(baseDate) {
   const year = baseDate.getFullYear();
@@ -15,7 +16,7 @@ function getMonthBounds(baseDate) {
 }
 
 function toKey(date) {
-  return new Date(date).toISOString().slice(0, 10);
+  return getLocalDateKey(new Date(date));
 }
 
 export default function CalendarPage() {
@@ -25,6 +26,7 @@ export default function CalendarPage() {
   const [records, setRecords] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [touchStartX, setTouchStartX] = useState(null);
+  const pickerRef = useRef(null);
 
   useEffect(() => {
     async function loadMonth() {
@@ -61,6 +63,7 @@ export default function CalendarPage() {
     month: "long",
     year: "numeric",
   });
+  const pickerValue = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}-${String(currentMonth.getDate()).padStart(2, "0")}`;
 
   const { first, last } = getMonthBounds(currentMonth);
   const days = [];
@@ -95,10 +98,28 @@ export default function CalendarPage() {
     setTouchStartX(null);
   }
 
+  function openPicker() {
+    if (!pickerRef.current) return;
+    if (typeof pickerRef.current.showPicker === "function") {
+      pickerRef.current.showPicker();
+      return;
+    }
+    pickerRef.current.click();
+  }
+
+  function onPickDate(event) {
+    const value = String(event.target.value || "").trim();
+    if (!value) return;
+    const picked = new Date(value);
+    if (Number.isNaN(picked.getTime())) return;
+    setCurrentMonth(new Date(picked.getFullYear(), picked.getMonth(), 1));
+    setSelectedDate(picked);
+  }
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto w-full max-w-3xl space-y-5">
-        <BackButton fallbackHref="/" />
+        <BackButton fallbackHref="/" preferFallback />
 
         <section className="rounded-3xl border border-slate-300 bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
@@ -107,15 +128,33 @@ export default function CalendarPage() {
               onClick={goPrev}
               className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold"
             >
-              ←
+              {"\u2190"}
             </button>
-            <h1 className="text-xl font-semibold">{monthLabel}</h1>
+
+            <button
+              type="button"
+              onClick={openPicker}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-xl font-semibold transition hover:border-slate-400"
+              title={t.menu?.calendar || "Calendar"}
+            >
+              {monthLabel}
+            </button>
+            <input
+              ref={pickerRef}
+              type="date"
+              value={pickerValue}
+              onChange={onPickDate}
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+
             <button
               type="button"
               onClick={goNext}
               className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold"
             >
-              →
+              {"\u2192"}
             </button>
           </div>
 

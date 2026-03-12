@@ -9,6 +9,7 @@ import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_NAME } from "@/lib/i18n/config";
 import { getDictionary, normalizeLanguage } from "@/lib/i18n";
 
 const TARGET_KEY = "ft_daily_target";
+const TARGET_DATE_KEY = "ft_daily_target_date";
 const PERSONA_KEY = "ft_persona_prompt";
 const PERSONA_REPLY_KEY = "ft_persona_reply";
 const NOTIFY_STATE_KEY = "ft_target_notify_state";
@@ -112,6 +113,9 @@ async function checkTargetNotifications(rows) {
   if (typeof window === "undefined") return;
 
   const targetValue = Number(window.localStorage.getItem(TARGET_KEY));
+  const targetDate = window.localStorage.getItem(TARGET_DATE_KEY) || "";
+  const todayKeyValue = getLocalDateKey(new Date());
+  if (targetDate && targetDate !== todayKeyValue) return;
   if (!targetValue || Number.isNaN(targetValue)) return;
 
   const personaPrompt = window.localStorage.getItem(PERSONA_KEY) || "";
@@ -126,7 +130,6 @@ async function checkTargetNotifications(rows) {
   };
 
   const today = new Date();
-  const todayKeyValue = getLocalDateKey(today);
 
   const spentToday = rows.reduce((sum, item) => {
     if (item.type !== "expense") return sum;
@@ -471,7 +474,6 @@ export function useTransactions() {
     removeTransaction,
   };
 }
-
 
 
 

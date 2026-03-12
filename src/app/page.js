@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BalancePie } from "@/features/dashboard/components/balance-pie";
+import { ForecastWidget } from "@/features/dashboard/components/forecast-widget";
 import { TargetBudgetBar } from "@/features/dashboard/components/target-budget-bar";
 import { TopNav } from "@/features/dashboard/components/top-nav";
 import { getDashboardSnapshot } from "@/lib/dashboard-data";
@@ -38,11 +39,29 @@ function isCorruptIcon(icon) {
   return false;
 }
 
+function isOthersCategoryName(name) {
+  const value = String(name || "").trim().toLowerCase();
+  if (!value) return false;
+  return (
+    value === "other" ||
+    value === "others" ||
+    value === "lain-lain" ||
+    value === "lain lain" ||
+    value.includes("other") ||
+    value.includes("lain") ||
+    value.includes("其他") ||
+    value.includes("其它")
+  );
+}
+
 function categoryIcon(category) {
+  const categoryName = String(category?.name || "");
+  if (isOthersCategoryName(categoryName)) return ICONS.BOX;
+
   const rawIcon = String(category?.icon || "");
   if (!isCorruptIcon(rawIcon)) return rawIcon;
 
-  const value = String(category?.name || "").toLowerCase();
+  const value = categoryName.toLowerCase();
   if (value.includes("breakfast")) return ICONS.BREAKFAST;
   if (value.includes("lunch")) return ICONS.LUNCH;
   if (value.includes("dinner")) return ICONS.DINNER;
@@ -108,17 +127,19 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-10">
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-        <TopNav monthLabel={monthLabel} currentUser={currentUser} />
+        <TopNav monthLabel={monthLabel} currentUser={currentUser} initialLanguage={language} />
 
         <div className="flex flex-col items-center justify-center gap-5">
           <BalancePie
             totalBalance={stats.totalBalance}
             monthlyExpense={stats.monthlyExpense}
             monthlyIncome={stats.monthlyIncome}
+            savingsBalance={stats.savingsBalance || 0}
             currency={stats.currency === "MYR" ? "RM" : stats.currency}
             labels={t.dashboard}
             expenseHref="/report?type=expense"
             incomeHref="/report?type=income"
+            forecastWidget={<ForecastWidget labels={t.forecast || {}} language={language} />}
             budgetBar={<TargetBudgetBar isAuthenticated={Boolean(currentUser)} />}
           />
 

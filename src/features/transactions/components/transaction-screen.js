@@ -179,6 +179,26 @@ function sanitizeIcon(icon) {
   return isCorruptIcon(icon) ? "" : String(icon);
 }
 
+function isOthersCategoryName(name) {
+  const value = normalizeName(name);
+  if (!value) return false;
+  return (
+    value === "other" ||
+    value === "others" ||
+    value === "lain-lain" ||
+    value === "lain lain" ||
+    value.includes("other") ||
+    value.includes("lain") ||
+    value.includes("其他") ||
+    value.includes("其它")
+  );
+}
+
+function normalizeDisplayIcon(name, icon, fallback) {
+  if (isOthersCategoryName(name)) return ICONS.BOX;
+  return sanitizeIcon(icon) || fallback || ICONS.BOX;
+}
+
 function getBaseForType(type) {
   return type === "income" ? BASE_INCOME_CATEGORIES : BASE_EXPENSE_CATEGORIES;
 }
@@ -210,7 +230,7 @@ function buildCategoryRows(rawRows) {
       ...row,
       name: rowName,
       type: safeType,
-      icon: sanitizeIcon(row.icon) || match?.icon || ICONS.BOX,
+      icon: normalizeDisplayIcon(rowName, row.icon, match?.icon || ICONS.BOX),
       baseKey: match?.key || null,
       isDefault: Boolean(match || isProtectedCategory(safeType, row.name)),
       isCustom: false,
@@ -354,11 +374,12 @@ export function TransactionScreen({ recordId }) {
   function confirmCustomCategory() {
     if (!newCategoryName.trim()) return;
     const id = `custom-${Date.now()}`;
+    const normalizedName = newCategoryName.trim();
     const next = {
       id,
-      name: newCategoryName.trim(),
+      name: normalizedName,
       type: mode,
-      icon: newCategoryIcon,
+      icon: isOthersCategoryName(normalizedName) ? ICONS.BOX : newCategoryIcon,
       baseKey: null,
       isDefault: false,
       isCustom: true,
@@ -623,10 +644,9 @@ export function TransactionScreen({ recordId }) {
           {!isEditing && mode === "expense" ? (
             <Link
               href="/scan"
-              className="flex w-full items-center justify-between rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-900"
+              className="flex w-full items-center justify-center rounded-2xl border border-rose-300 bg-rose-100 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-200"
             >
-              <span>{t.scan?.scanReceipt || t.pages?.scan || "Scan receipt"}</span>
-              <span className="text-xs text-slate-500">{t.pages?.scanDesc || "Scan and auto record"}</span>
+              {t.scan?.scanReceipt || "Scan receipt"}
             </Link>
           ) : null}
         </form>

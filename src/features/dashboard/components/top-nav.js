@@ -8,10 +8,10 @@ import { useLanguage } from "@/hooks/use-language";
 import { useNotifications } from "@/lib/use-notifications";
 import { logoutUser } from "@/services/auth-api";
 
-export function TopNav({ monthLabel, currentUser }) {
+export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
   const router = useRouter();
-  const { language, setLanguage, t } = useLanguage();
-  const { unreadCount } = useNotifications();
+  const { language, setLanguage, t } = useLanguage(initialLanguage);
+  const { unreadCount, ready: notificationsReady } = useNotifications();
   const badgeLabel = unreadCount >= 9 ? "9+" : `${unreadCount}+`;
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -115,7 +115,7 @@ export function TopNav({ monthLabel, currentUser }) {
             className="relative inline-flex h-10 w-10 items-center justify-center"
           >
             <span aria-hidden="true">{"\u{1F514}"}</span>
-            {unreadCount > 0 ? (
+            {notificationsReady && unreadCount > 0 ? (
               <span
                 className="absolute right-0 top-0 flex h-5 min-w-[1.25rem] -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white"
                 aria-label={`${badgeLabel} unread notifications`}
@@ -226,6 +226,13 @@ export function TopNav({ monthLabel, currentUser }) {
                       {t.menu.report}
                     </Link>
                     <Link
+                      href="/recurring"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                    >
+                      {t.menu.recurring || "Recurring"}
+                    </Link>
+                    <Link
                       href="/streak"
                       onClick={() => setOpen(false)}
                       className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
@@ -317,9 +324,6 @@ export function TopNav({ monthLabel, currentUser }) {
     </>
   );
 }
-
-
-
 
 
 

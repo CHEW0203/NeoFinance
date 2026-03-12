@@ -19,9 +19,11 @@ function readCookieLanguage() {
   return normalizeLanguage(found.slice(key.length));
 }
 
-export function useLanguage() {
+export function useLanguage(initialLanguage = DEFAULT_LANGUAGE) {
   const router = useRouter();
-  const [language, setLanguageState] = useState(readCookieLanguage);
+  const [language, setLanguageState] = useState(() =>
+    normalizeLanguage(initialLanguage || readCookieLanguage())
+  );
   const t = useMemo(() => getDictionary(language), [language]);
 
   function setLanguage(nextLanguage) {
@@ -41,5 +43,3 @@ export function useLanguage() {
     t,
   };
 }
-
-

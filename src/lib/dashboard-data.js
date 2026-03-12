@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/auth/session";
+import { applyDueRecurringTransactionsForUser } from "@/lib/recurring";
 
 function startOfMonth(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -10,6 +11,7 @@ export async function getDashboardSnapshot() {
   if (!user) {
     return null;
   }
+  await applyDueRecurringTransactionsForUser(user.id);
   const monthStart = startOfMonth();
 
   const userWithData = await prisma.user.findUnique({
@@ -23,6 +25,11 @@ export async function getDashboardSnapshot() {
           name: true,
           balance: true,
           currency: true,
+        },
+      },
+      savingsVault: {
+        select: {
+          amount: true,
         },
       },
       transactions: {
@@ -80,6 +87,7 @@ export async function getDashboardSnapshot() {
       monthlyIncome,
       monthlyExpense,
       currency: userWithData.accounts[0]?.currency || "MYR",
+      savingsBalance: Number(userWithData.savingsVault?.amount || 0),
     },
     recentTransactions: monthlyTransactions,
   };

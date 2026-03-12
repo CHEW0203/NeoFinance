@@ -16,6 +16,11 @@ export async function GET() {
         id: true,
         username: true,
         createdAt: true,
+        savingsVault: {
+          select: {
+            amount: true,
+          },
+        },
         transactions: { select: { id: true } },
       },
     });
@@ -26,6 +31,7 @@ export async function GET() {
         username: profile.username,
         createdAt: profile.createdAt,
         transactionCount: profile.transactions.length,
+        savingsAmount: Number(profile.savingsVault?.amount || 0),
       },
     });
   } catch (error) {

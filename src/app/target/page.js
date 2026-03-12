@@ -104,9 +104,12 @@ export default function TargetPage() {
   const [pendingTarget, setPendingTarget] = useState(null);
   const [questionInput, setQuestionInput] = useState("");
   const [isQuestionLoading, setIsQuestionLoading] = useState(false);
+  const [currentBalance, setCurrentBalance] = useState(null);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
 
   const lastInteractionRef = useRef(Date.now());
   const idleTriggeredRef = useRef(false);
+  const rolloverInFlightRef = useRef(false);
   const latestRef = useRef({
     personaPrompt: "",
     targetAmount: null,
@@ -143,6 +146,28 @@ export default function TargetPage() {
     return targetErrors.requestTimeout || "Request timed out. Please try again.";
   }
 
+  async function loadCurrentBalance() {
+    try {
+      const response = await fetch("/api/accounts/summary", {
+        cache: "no-store",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to load balance.");
+      }
+      const payload = await response.json();
+      const nextBalance = Number(payload?.data?.totalBalance);
+      if (!Number.isFinite(nextBalance)) {
+        throw new Error("Invalid balance.");
+      }
+      setCurrentBalance(nextBalance);
+    } catch {
+      setCurrentBalance(null);
+    } finally {
+      setIsBalanceLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -164,6 +189,21 @@ export default function TargetPage() {
     }
 
     setTargetDate(storedDate);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const refresh = () => loadCurrentBalance();
+    loadCurrentBalance();
+
+    window.addEventListener("focus", refresh);
+    window.addEventListener("neo:transactions-updated", refresh);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("neo:transactions-updated", refresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -197,6 +237,12 @@ export default function TargetPage() {
   const today = useMemo(() => new Date(), []);
   const todayKeyValue = getLocalDateKey(today);
 
+  function clearStoredTarget() {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(TARGET_KEY);
+    window.localStorage.removeItem(TARGET_DATE_KEY);
+  }
+
   const spentToday = useMemo(() => {
     if (!transactions || transactions.length === 0) return 0;
     return transactions.reduce((sum, item) => {
@@ -206,6 +252,51 @@ export default function TargetPage() {
       return sum + Number(item.amount || 0);
     }, 0);
   }, [transactions, today]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isLoading) return;
+    if (!targetAmount || !targetDate) return;
+    if (targetDate >= todayKeyValue) return;
+    if (rolloverInFlightRef.current) return;
+
+    rolloverInFlightRef.current = true;
+    const spentForTargetDate = (transactions || []).reduce((sum, item) => {
+      if (item.type !== "expense") return sum;
+      const key = getLocalDateKey(new Date(item.transactionDate));
+      if (key !== targetDate) return sum;
+      return sum + Number(item.amount || 0);
+    }, 0);
+    const remainingForTargetDate = Number(targetAmount) - spentForTargetDate;
+
+    (async () => {
+      try {
+        if (remainingForTargetDate > 0) {
+          await fetch("/api/savings/rollover", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              sourceDate: targetDate,
+              targetAmount: Number(targetAmount),
+              spentAmount: spentForTargetDate,
+              remainingAmount: remainingForTargetDate,
+            }),
+          });
+        }
+      } catch {
+        // best effort: if this fails, it can retry when dashboard/target reloads
+      } finally {
+        clearStoredTarget();
+        setTargetAmount(null);
+        setTargetDate("");
+        setPendingTarget(null);
+        window.dispatchEvent(new Event("neo:target-updated"));
+        window.dispatchEvent(new Event("neo:transactions-updated"));
+        rolloverInFlightRef.current = false;
+      }
+    })();
+  }, [isLoading, targetAmount, targetDate, todayKeyValue, transactions]);
 
   const remaining = useMemo(() => {
     if (!targetAmount) return null;
@@ -544,8 +635,7 @@ export default function TargetPage() {
     setTargetInput("");
     setError("");
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(TARGET_KEY);
-      window.localStorage.removeItem(TARGET_DATE_KEY);
+      clearStoredTarget();
       window.localStorage.removeItem(NOTIFY_STATE_KEY);
       window.dispatchEvent(new Event("neo:target-updated"));
     }
@@ -566,6 +656,22 @@ export default function TargetPage() {
         "{amount}",
         Number(pendingTarget).toFixed(2)
       )
+    : "";
+
+  const hasBalanceInfo = Number.isFinite(currentBalance);
+  const inputValueNumber = Number(targetInput);
+  const targetInputExceedsBalance =
+    hasBalanceInfo &&
+    Number.isFinite(inputValueNumber) &&
+    inputValueNumber > 0 &&
+    inputValueNumber > currentBalance;
+  const pendingTargetExceedsBalance =
+    hasBalanceInfo && pendingTarget !== null && Number(pendingTarget) > currentBalance;
+
+  const exceedsBalanceLabel = pendingTargetExceedsBalance
+    ? (targetCopy.targetExceedsBalance || "Target RM {target} is higher than balance RM {balance}.")
+        .replace("{target}", Number(pendingTarget).toFixed(2))
+        .replace("{balance}", Number(currentBalance).toFixed(2))
     : "";
 
   return (
@@ -660,9 +766,34 @@ export default function TargetPage() {
                   </button>
                 </div>
 
+                <div className="px-1 text-xs">
+                  {isBalanceLoading ? (
+                    <p className="text-slate-400">...</p>
+                  ) : hasBalanceInfo ? (
+                    <p className="text-slate-500">
+                      {(targetCopy.currentBalance || "Current balance") + ": "}
+                      <span className="font-semibold text-slate-700">
+                        {formatCurrency(currentBalance, "RM")}
+                      </span>
+                    </p>
+                  ) : null}
+                  {targetInputExceedsBalance ? (
+                    <p className="mt-1 font-semibold text-amber-600">
+                      {(targetCopy.targetExceedsBalance || "Target RM {target} is higher than balance RM {balance}.")
+                        .replace("{target}", Number(inputValueNumber).toFixed(2))
+                        .replace("{balance}", Number(currentBalance).toFixed(2))}
+                    </p>
+                  ) : null}
+                </div>
+
                 {pendingTarget ? (
                   <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-600 shadow-sm">
-                    <span>{confirmTargetLabel}</span>
+                    <div className="space-y-1">
+                      <p>{confirmTargetLabel}</p>
+                      {pendingTargetExceedsBalance ? (
+                        <p className="font-semibold text-amber-600">{exceedsBalanceLabel}</p>
+                      ) : null}
+                    </div>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"

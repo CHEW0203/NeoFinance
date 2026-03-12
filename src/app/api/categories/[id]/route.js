@@ -91,18 +91,29 @@ export async function DELETE(_request, context) {
       const hasTransactions = await tx.transaction.count({
         where: { categoryId: category.id, userId: user.id },
       });
+      const hasRecurringRules = await tx.recurringTransaction.count({
+        where: { categoryId: category.id, userId: user.id },
+      });
 
-      if (hasTransactions > 0) {
+      if (hasTransactions > 0 || hasRecurringRules > 0) {
         const fallbackId = await findOrCreateFallbackCategory(
           tx,
           user.id,
           category.type,
           category.id
         );
-        await tx.transaction.updateMany({
-          where: { categoryId: category.id, userId: user.id },
-          data: { categoryId: fallbackId },
-        });
+        if (hasTransactions > 0) {
+          await tx.transaction.updateMany({
+            where: { categoryId: category.id, userId: user.id },
+            data: { categoryId: fallbackId },
+          });
+        }
+        if (hasRecurringRules > 0) {
+          await tx.recurringTransaction.updateMany({
+            where: { categoryId: category.id, userId: user.id },
+            data: { categoryId: fallbackId },
+          });
+        }
       }
 
       await tx.category.delete({

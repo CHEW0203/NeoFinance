@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
+import { applyDueRecurringTransactionsForUser } from "@/lib/recurring";
 
 const VALID_TYPES = new Set(["income", "expense"]);
 const EXPENSE_CATEGORY_ALIAS_TO_FOOD = new Set(["breakfast", "lunch", "dinner"]);
@@ -25,6 +26,28 @@ function normalizeCategoryName(type, value) {
   if (!name) return name;
   if (type !== "expense") return name;
   return EXPENSE_CATEGORY_ALIAS_TO_FOOD.has(name.toLowerCase()) ? "Food" : name;
+}
+
+function isOthersCategoryName(name) {
+  const value = String(name || "").trim().toLowerCase();
+  if (!value) return false;
+  return (
+    value === "other" ||
+    value === "others" ||
+    value === "lain-lain" ||
+    value === "lain lain" ||
+    value.includes("other") ||
+    value.includes("lain") ||
+    value.includes("其他") ||
+    value.includes("其它")
+  );
+}
+
+function normalizeCategoryIconForName(type, categoryName, icon) {
+  if (isOthersCategoryName(categoryName)) {
+    return "\u{1F4E6}";
+  }
+  return icon ? String(icon).trim() : null;
 }
 
 async function getAuthenticatedUserWithBaseData() {
@@ -60,6 +83,7 @@ const EXPENSE_ICONS = [
   "\u{1F3E0}",
   "\u{1F4F1}",
   "\u{1F9FE}",
+  "\u{1F4E6}",
 ];
 const INCOME_ICONS = [
   "\u{1F4BC}",
@@ -77,6 +101,7 @@ const INCOME_ICONS = [
   "\u{1F393}",
   "\u{1F454}",
   "\u{1F4CA}",
+  "\u{1F4E6}",
 ];
 
 // ==========================================
@@ -161,6 +186,7 @@ export async function GET(request) {
         { status: 401 }
       );
     }
+    await applyDueRecurringTransactionsForUser(user.id);
 
     const { searchParams } = new URL(request.url);
     const limit = Math.min(Math.max(Number(searchParams.get("limit") || 50), 1), 500);
@@ -380,6 +406,7 @@ export async function POST(request) {
     }
 
     categoryName = categoryName ? normalizeCategoryName(type, categoryName) : categoryName;
+    categoryIcon = normalizeCategoryIconForName(type, categoryName, categoryIcon);
 
     const account = user.accounts.find((item) => item.id === body.accountId) || user.accounts[0];
     if (!account) {
@@ -400,7 +427,7 @@ export async function POST(request) {
           console.log(`[AI System] Successfully matched existing Category ID: ${bodyCategoryId}`);
         } else if (aiResult.type === "new" && aiResult.name && aiResult.icon) {
           categoryName = normalizeCategoryName(type, aiResult.name);
-          categoryIcon = aiResult.icon;
+          categoryIcon = normalizeCategoryIconForName(type, categoryName, aiResult.icon);
           console.log(`[AI System] Successfully generated new Category: ${categoryName} ${categoryIcon}`);
         }
       }
@@ -429,13 +456,22 @@ export async function POST(request) {
           data: {
             name: categoryName,
             type,
-            icon: categoryIcon || null,
+            icon: normalizeCategoryIconForName(type, categoryName, categoryIcon),
             color: categoryColor,
             userId: user.id,
           },
           select: { id: true },
         });
         categoryId = createdCategory.id;
+      } else if (
+        categoryByName &&
+        isOthersCategoryName(categoryByName.name) &&
+        String(categoryByName.icon || "").trim() !== "\u{1F4E6}"
+      ) {
+        await tx.category.update({
+          where: { id: categoryByName.id },
+          data: { icon: "\u{1F4E6}" },
+        });
       }
       
       if (!categoryId) {
@@ -478,7 +514,4 @@ export async function POST(request) {
     );
   }
 }
-
-
-
 

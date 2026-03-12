@@ -33,6 +33,21 @@ function normalizeCategoryName(type, value) {
   return EXPENSE_CATEGORY_ALIAS_TO_FOOD.has(name.toLowerCase()) ? "Food" : name;
 }
 
+function isOthersCategoryName(name) {
+  const value = String(name || "").trim().toLowerCase();
+  if (!value) return false;
+  return (
+    value === "other" ||
+    value === "others" ||
+    value === "lain-lain" ||
+    value === "lain lain" ||
+    value.includes("other") ||
+    value.includes("lain") ||
+    value.includes("其他") ||
+    value.includes("其它")
+  );
+}
+
 function normalizeCurrency(value) {
   const raw = String(value || "").trim().toUpperCase();
   if (!raw) return null;
@@ -381,12 +396,22 @@ export async function POST(request) {
 
     const result = await prisma.$transaction(async (tx) => {
       let categoryId = categoryByName?.id || null;
+      if (
+        categoryByName &&
+        isOthersCategoryName(categoryByName.name) &&
+        String(categoryByName.icon || "").trim() !== "\u{1F4E6}"
+      ) {
+        await tx.category.update({
+          where: { id: categoryByName.id },
+          data: { icon: "\u{1F4E6}" },
+        });
+      }
       if (!categoryId && categoryName) {
         const createdCategory = await tx.category.create({
           data: {
             name: categoryName,
             type: "expense",
-            icon: null,
+            icon: isOthersCategoryName(categoryName) ? "\u{1F4E6}" : null,
             color: categoryColor,
             userId: user.id,
           },

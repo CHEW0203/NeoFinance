@@ -47,7 +47,7 @@ export function GalleryScreen() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto w-full max-w-4xl space-y-5">
-        <BackButton fallbackHref="/" />
+        <BackButton fallbackHref="/" preferFallback />
 
         <section className="rounded-3xl border border-slate-300 bg-white p-6">
           <h1 className="text-2xl font-semibold text-slate-900">

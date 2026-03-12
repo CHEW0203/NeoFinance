@@ -13,11 +13,16 @@ export function middleware(request) {
     pathname.startsWith("/scan") ||
     pathname.startsWith("/gallery") ||
     pathname.startsWith("/report") ||
+    pathname.startsWith("/recurring") ||
     pathname.startsWith("/streak");
   const protectedApi =
     pathname.startsWith("/api/transactions") ||
     pathname.startsWith("/api/categories") ||
-    pathname.startsWith("/api/receipts");
+    pathname.startsWith("/api/recurring") ||
+    pathname.startsWith("/api/receipts") ||
+    pathname.startsWith("/api/savings") ||
+    pathname.startsWith("/api/forecast") ||
+    pathname.startsWith("/api/accounts/summary");
 
   if (!hasSessionCookie && protectedPage) {
     const loginUrl = new URL("/login", request.url);
@@ -44,9 +49,14 @@ export const config = {
     "/scan/:path*",
     "/gallery/:path*",
     "/report/:path*",
+    "/recurring/:path*",
     "/streak/:path*",
     "/api/transactions/:path*",
     "/api/categories/:path*",
+    "/api/recurring/:path*",
     "/api/receipts/:path*",
+    "/api/savings/:path*",
+    "/api/forecast/:path*",
+    "/api/accounts/summary/:path*",
   ],
 };

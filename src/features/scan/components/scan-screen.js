@@ -40,7 +40,7 @@ export function ScanScreen() {
   const [categories, setCategories] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [editAmount, setEditAmount] = useState("");
-  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editCategoryName, setEditCategoryName] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -60,7 +60,7 @@ export function ScanScreen() {
     const transaction = result?.transaction;
     if (!transaction) return;
     setEditAmount(String(transaction.amount ?? ""));
-    setEditCategoryId(transaction.categoryId || transaction.category?.id || "");
+    setEditCategoryName(transaction.category?.name || "");
     setEditError("");
   }, [result]);
 
@@ -224,12 +224,13 @@ export function ScanScreen() {
       if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
         throw new Error(t.scan?.invalidAmount || "Please enter a valid amount.");
       }
-      if (!editCategoryId) {
-        throw new Error(t.transactions?.selectCategory || "Please select a category.");
+      const manualCategory = String(editCategoryName || "").trim();
+      if (!manualCategory) {
+        throw new Error(t.scan?.invalidCategory || "Please enter a category.");
       }
       const payload = {
         amount: parsedAmount,
-        categoryId: editCategoryId,
+        categoryName: manualCategory,
       };
       const response = await fetch(`/api/transactions/${transaction.id}`, {
         method: "PATCH",
@@ -262,11 +263,14 @@ export function ScanScreen() {
   const transaction = result?.transaction;
   const receipt = result?.receipt;
   const expenseCategories = categories.filter((item) => item.type === "expense");
+  const expenseCategoryNames = expenseCategories
+    .map((item) => String(item.name || "").trim())
+    .filter(Boolean);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto w-full max-w-3xl space-y-5">
-        <BackButton fallbackHref="/" />
+        <BackButton fallbackHref="/" preferFallback />
 
         <section className="rounded-3xl border border-slate-300 bg-white p-6">
           <h1 className="text-2xl font-semibold text-slate-900">
@@ -380,6 +384,12 @@ export function ScanScreen() {
                   </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold text-slate-500">{t.scan?.date || "Date"}</p>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {formatDate(transaction.transactionDate)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
                   <label className="text-xs font-semibold text-slate-500">
                     {t.scan?.amount || "Amount"}
                   </label>
@@ -395,33 +405,41 @@ export function ScanScreen() {
                     {formatCurrency(transaction.amount, transaction.account?.currency || "RM")}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
                   <label className="text-xs font-semibold text-slate-500">
                     {t.scan?.category || "Category"}
                   </label>
-                  <select
-                    value={editCategoryId}
-                    onChange={(event) => setEditCategoryId(event.target.value)}
-                    disabled={isLoadingCategories || expenseCategories.length === 0}
+                  <input
+                    type="text"
+                    value={editCategoryName}
+                    onChange={(event) => setEditCategoryName(event.target.value)}
+                    placeholder={t.scan?.categoryPlaceholder || "Type your category (example: Drink)"}
+                    disabled={isLoadingCategories}
                     className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-slate-800 disabled:opacity-60"
-                  >
-                    {expenseCategories.length === 0 ? (
-                      <option value="">{t.transactions?.categoryNotFound || "Category not found."}</option>
-                    ) : null}
-                    {expenseCategories.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  {expenseCategoryNames.length > 0 ? (
+                    <div className="mt-3 flex max-h-24 flex-wrap gap-2 overflow-y-auto">
+                      {expenseCategoryNames.map((name) => {
+                        const active = editCategoryName.trim().toLowerCase() === name.toLowerCase();
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => setEditCategoryName(name)}
+                            className={
+                              active
+                                ? "rounded-full border border-cyan-300 bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-900"
+                                : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-900"
+                            }
+                          >
+                            {name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                   <p className="mt-1 text-xs text-slate-500">
-                    {transaction.category?.name || "-"}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold text-slate-500">{t.scan?.date || "Date"}</p>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {formatDate(transaction.transactionDate)}
+                    {t.scan?.categoryHint || "You can type any custom category. AI will match an icon automatically."}
                   </p>
                 </div>
               </div>

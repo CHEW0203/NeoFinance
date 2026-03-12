@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "ft_notifications";
 const STORAGE_VERSION_KEY = "ft_notifications_version";
@@ -34,8 +34,28 @@ function getInitialNotifications() {
 }
 
 export function useNotifications() {
-  const [notifications, setNotifications] = useState(getInitialNotifications);
+  const [notifications, setNotifications] = useState(DEFAULT_NOTIFICATIONS);
   const ready = true;
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const initial = getInitialNotifications();
+      setNotifications(initial);
+    }, 0);
+
+    function handleStorage(event) {
+      if (!event || event.key === STORAGE_KEY || event.key === STORAGE_VERSION_KEY) {
+        const latest = getInitialNotifications();
+        setNotifications(latest);
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.isRead).length,

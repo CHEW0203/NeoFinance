@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "@/hooks/use-language";
 import { formatCurrency } from "@/utils/format";
 
@@ -29,21 +29,71 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
   const [targetAmount, setTargetAmount] = useState(null);
   const [spentToday, setSpentToday] = useState(0);
   const [isLoading, setIsLoading] = useState(isAuthenticated);
+  const rolloverInFlightRef = useRef(false);
 
-  function syncTargetFromStorage() {
-    if (typeof window === "undefined") return false;
-    const storedTarget = Number(window.localStorage.getItem(TARGET_KEY));
-    const storedDate = window.localStorage.getItem(TARGET_DATE_KEY);
-    const today = todayKey();
-    if (storedDate !== today || !Number.isFinite(storedTarget) || storedTarget <= 0) {
-      setTargetAmount(null);
-      return false;
-    }
-    setTargetAmount(storedTarget);
-    return true;
+  function clearStoredTarget() {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(TARGET_KEY);
+    window.localStorage.removeItem(TARGET_DATE_KEY);
   }
 
-  async function loadTodaySpent() {
+  function readStoredTarget() {
+    if (typeof window === "undefined") return null;
+    const amount = Number(window.localStorage.getItem(TARGET_KEY));
+    const date = window.localStorage.getItem(TARGET_DATE_KEY) || "";
+    if (!Number.isFinite(amount) || amount <= 0 || !date) return null;
+    return { amount, date };
+  }
+
+  async function processRolloverIfNeeded(storedTarget, rows) {
+    if (!storedTarget) return null;
+    const today = todayKey();
+    if (storedTarget.date === today) {
+      return storedTarget;
+    }
+
+    if (rolloverInFlightRef.current) {
+      return null;
+    }
+
+    rolloverInFlightRef.current = true;
+    try {
+      const spentForStoredDate = rows.reduce((sum, item) => {
+        if (item.type !== "expense") return sum;
+        const key = todayKey(new Date(item.transactionDate));
+        if (key !== storedTarget.date) return sum;
+        return sum + Number(item.amount || 0);
+      }, 0);
+
+      const remaining = storedTarget.amount - spentForStoredDate;
+      if (remaining > 0) {
+        await fetch("/api/savings/rollover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            sourceDate: storedTarget.date,
+            targetAmount: storedTarget.amount,
+            spentAmount: spentForStoredDate,
+            remainingAmount: remaining,
+          }),
+        });
+      }
+
+      clearStoredTarget();
+      window.dispatchEvent(new Event("neo:target-updated"));
+      window.dispatchEvent(new Event("neo:transactions-updated"));
+      return null;
+    } catch {
+      return storedTarget;
+    } finally {
+      rolloverInFlightRef.current = false;
+    }
+  }
+
+  async function syncTargetAndSpent() {
+    const storedTarget = readStoredTarget();
+
     try {
       const response = await fetch("/api/transactions?limit=500", {
         cache: "no-store",
@@ -52,6 +102,7 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
       if (!response.ok) throw new Error("Failed to load transactions");
       const payload = await response.json();
       const rows = payload?.data || [];
+
       const today = todayKey();
       const spent = rows.reduce((sum, item) => {
         if (item.type !== "expense") return sum;
@@ -60,8 +111,12 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
         return sum + Number(item.amount || 0);
       }, 0);
       setSpentToday(spent);
+
+      const activeTarget = await processRolloverIfNeeded(storedTarget, rows);
+      setTargetAmount(activeTarget?.amount || null);
     } catch {
       setSpentToday(0);
+      setTargetAmount(storedTarget?.date === todayKey() ? storedTarget.amount : null);
     } finally {
       setIsLoading(false);
     }
@@ -74,8 +129,7 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
     }
 
     const syncAll = () => {
-      syncTargetFromStorage();
-      loadTodaySpent();
+      syncTargetAndSpent();
     };
 
     syncAll();

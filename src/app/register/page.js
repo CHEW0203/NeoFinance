@@ -46,39 +46,44 @@ export default function RegisterPage() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, password: event.target.value }))
               }
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-[13px] outline-none focus:border-emerald-600"
+              className={`w-full appearance-none rounded-2xl border border-slate-300 bg-white px-4 py-3 text-[13px] outline-none focus:border-emerald-600 ${
+                form.password ? "pr-12" : ""
+              }`}
               required
+              autoComplete="new-password"
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-800"
-              aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
-              title={showPassword ? t.auth.hidePassword : t.auth.showPassword}
-            >
-              {showPassword ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M3 3L21 21M10.58 10.58A2 2 0 0013.42 13.42M9.88 4.24A10.94 10.94 0 0112 4c7 0 10 8 10 8a15.9 15.9 0 01-4.12 5.06M6.61 6.61C3.97 8.42 2 12 2 12a15.9 15.9 0 004.12 5.06A10.94 10.94 0 0012 20c1.61 0 3.09-.31 4.39-.87"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M2 12S5 4 12 4s10 8 10 8-3 8-10 8S2 12 2 12Z"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-                </svg>
-              )}
-            </button>
+            {form.password ? (
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-800"
+                aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+                title={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+              >
+                {showPassword ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M3 3L21 21M10.58 10.58A2 2 0 0013.42 13.42M9.88 4.24A10.94 10.94 0 0112 4c7 0 10 8 10 8a15.9 15.9 0 01-4.12 5.06M6.61 6.61C3.97 8.42 2 12 2 12a15.9 15.9 0 004.12 5.06A10.94 10.94 0 0012 20c1.61 0 3.09-.31 4.39-.87"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M2 12S5 4 12 4s10 8 10 8-3 8-10 8S2 12 2 12Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                )}
+              </button>
+            ) : null}
           </div>
           <div className="relative">
             <input
@@ -88,43 +93,48 @@ export default function RegisterPage() {
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
               }
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-[13px] outline-none focus:border-emerald-600"
+              className={`w-full appearance-none rounded-2xl border border-slate-300 bg-white px-4 py-3 text-[13px] outline-none focus:border-emerald-600 ${
+                form.confirmPassword ? "pr-12" : ""
+              }`}
               required
+              autoComplete="new-password"
             />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPassword((prev) => !prev)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-800"
-              aria-label={
-                showConfirmPassword ? t.auth.hideConfirmPassword : t.auth.showConfirmPassword
-              }
-              title={
-                showConfirmPassword ? t.auth.hideConfirmPassword : t.auth.showConfirmPassword
-              }
-            >
-              {showConfirmPassword ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M3 3L21 21M10.58 10.58A2 2 0 0013.42 13.42M9.88 4.24A10.94 10.94 0 0112 4c7 0 10 8 10 8a15.9 15.9 0 01-4.12 5.06M6.61 6.61C3.97 8.42 2 12 2 12a15.9 15.9 0 004.12 5.06A10.94 10.94 0 0012 20c1.61 0 3.09-.31 4.39-.87"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M2 12S5 4 12 4s10 8 10 8-3 8-10 8S2 12 2 12Z"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-                </svg>
-              )}
-            </button>
+            {form.confirmPassword ? (
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((prev) => !prev)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-800"
+                aria-label={
+                  showConfirmPassword ? t.auth.hideConfirmPassword : t.auth.showConfirmPassword
+                }
+                title={
+                  showConfirmPassword ? t.auth.hideConfirmPassword : t.auth.showConfirmPassword
+                }
+              >
+                {showConfirmPassword ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M3 3L21 21M10.58 10.58A2 2 0 0013.42 13.42M9.88 4.24A10.94 10.94 0 0112 4c7 0 10 8 10 8a15.9 15.9 0 01-4.12 5.06M6.61 6.61C3.97 8.42 2 12 2 12a15.9 15.9 0 004.12 5.06A10.94 10.94 0 0012 20c1.61 0 3.09-.31 4.39-.87"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M2 12S5 4 12 4s10 8 10 8-3 8-10 8S2 12 2 12Z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                )}
+              </button>
+            ) : null}
           </div>
 
           <button
