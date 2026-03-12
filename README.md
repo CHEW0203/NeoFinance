@@ -120,25 +120,7 @@ Open:
 
 - [http://localhost:3000](http://localhost:3000)
 
-### 7. (Optional) Use local custom host `neofinance.local`
-
-1. Edit `C:\Windows\System32\drivers\etc\hosts` as Administrator and add:
-
-```txt
-127.0.0.1 neofinance.local
-```
-
-2. Flush DNS:
-
-```powershell
-ipconfig /flushdns
-```
-
-3. Restart dev server, then open:
-
-- [http://neofinance.local:3000](http://neofinance.local:3000)
-
-### 8. Open Prisma Studio
+### 7. Open Prisma Studio
 
 ```bash
 npm run db:studio
