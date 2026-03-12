@@ -6,11 +6,29 @@ import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
 import { useTransactions } from "@/hooks/use-transactions";
 import { pickCategoryColor } from "@/lib/category-colors";
+import { getLocaleFromLanguage } from "@/lib/i18n";
 import { getLocalizedCategoryLabel } from "@/lib/i18n/category-labels";
 import { formatCurrency } from "@/utils/format";
 
 const PERSONA_KEY = "ft_persona_prompt";
 const TIMEOUT_ERROR_CODE = "REQUEST_TIMEOUT";
+
+function formatCompactCurrency(amount, currency = "RM") {
+  const value = Number(amount || 0);
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+
+  if (abs >= 1_000_000_000) {
+    return `${currency} ${sign}${(abs / 1_000_000_000).toFixed(abs >= 10_000_000_000 ? 0 : 1)}B`;
+  }
+  if (abs >= 1_000_000) {
+    return `${currency} ${sign}${(abs / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
+  }
+  if (abs >= 10_000) {
+    return `${currency} ${sign}${(abs / 1_000).toFixed(abs >= 100_000 ? 0 : 1)}K`;
+  }
+  return formatCurrency(value, currency);
+}
 
 function startOfDay(date) {
   const next = new Date(date);
@@ -272,7 +290,7 @@ async function fetchPersonaMessage(payload, language) {
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data?.error || "Failed to generate response.");
+      throw new Error(data?.error || "");
     }
 
     return data?.text || "";
@@ -293,6 +311,7 @@ export default function ReportPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { language, t } = useLanguage();
+  const locale = getLocaleFromLanguage(language);
   const { transactions, isLoading, error } = useTransactions();
   const selectedType = searchParams.get("type") === "income" ? "income" : "expense";
   const isIncome = selectedType === "income";
@@ -319,20 +338,20 @@ export default function ReportPage() {
       setIsForecastLoading(true);
       setForecastError("");
       try {
-        const response = await fetch(`/api/forecast?lang=${encodeURIComponent(language)}`, {
-          cache: "no-store",
-          credentials: "include",
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload.message || "Failed to load forecast.");
-        }
+      const response = await fetch(`/api/forecast?lang=${encodeURIComponent(language)}`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.message || "");
+      }
         if (!cancelled) {
           setForecastData(payload.data || null);
         }
       } catch (requestError) {
         if (!cancelled) {
-          setForecastError(requestError.message || "Failed to load forecast.");
+          setForecastError(t.forecast.loadFailed);
           setForecastData(null);
         }
       } finally {
@@ -345,34 +364,34 @@ export default function ReportPage() {
     return () => {
       cancelled = true;
     };
-  }, [language]);
+  }, [language, t?.forecast?.loadFailed]);
 
   const rangeLabel = useMemo(() => {
-    if (range === "month") return t?.pages?.month1 || "1 Month";
-    if (range === "half") return t?.pages?.month6 || "6 Months";
-    return t?.pages?.year1 || "1 Year";
+    if (range === "month") return t.pages.month1;
+    if (range === "half") return t.pages.month6;
+    return t.pages.year1;
   }, [range, t]);
 
   const typeLabels = useMemo(() => {
     if (isIncome) {
       return {
-        summaryTitle: t?.pages?.reportIncomeSummaryTitle || "Income Summary",
-        detailsTitle: t?.pages?.reportIncomeDetailsTitle || "Income Breakdown",
-        totalLabel: t?.pages?.reportIncomeTotal || "Total income",
-        topCategoryLabel: t?.pages?.reportIncomeTopCategory || "Top source",
-        avgLabel: t?.pages?.reportAvgDaily || "Avg per day",
-        countLabel: t?.pages?.reportTransactionCount || "Transactions",
-        noData: t?.pages?.reportIncomeNoData || "No income found for this period.",
+        summaryTitle: t.pages.reportIncomeSummaryTitle,
+        detailsTitle: t.pages.reportIncomeDetailsTitle,
+        totalLabel: t.pages.reportIncomeTotal,
+        topCategoryLabel: t.pages.reportIncomeTopCategory,
+        avgLabel: t.pages.reportAvgDaily,
+        countLabel: t.pages.reportTransactionCount,
+        noData: t.pages.reportIncomeNoData,
       };
     }
     return {
-      summaryTitle: t?.pages?.reportSummaryTitle || "Spending Summary",
-      detailsTitle: t?.pages?.reportDetailsTitle || "Category Breakdown",
-      totalLabel: t?.pages?.reportTotal || "Total spent",
-      topCategoryLabel: t?.pages?.reportTopCategory || "Top category",
-      avgLabel: t?.pages?.reportAvgDaily || "Avg per day",
-      countLabel: t?.pages?.reportTransactionCount || "Transactions",
-      noData: t?.pages?.reportNoData || "No expenses found for this period.",
+      summaryTitle: t.pages.reportSummaryTitle,
+      detailsTitle: t.pages.reportDetailsTitle,
+      totalLabel: t.pages.reportTotal,
+      topCategoryLabel: t.pages.reportTopCategory,
+      avgLabel: t.pages.reportAvgDaily,
+      countLabel: t.pages.reportTransactionCount,
+      noData: t.pages.reportNoData,
     };
   }, [isIncome, t]);
 
@@ -414,7 +433,7 @@ export default function ReportPage() {
           id,
           name: category.name
             ? getLocalizedCategoryLabel(category.name, language)
-            : t?.pages?.reportUncategorized || "Uncategorized",
+            : t.pages.reportUncategorized,
           color: category.color || "",
           total: 0,
           items: [],
@@ -492,7 +511,7 @@ export default function ReportPage() {
       .slice(0, 4)
       .map((item) => `${item.name}: ${formatCurrency(item.total, "RM")} (${item.percent.toFixed(0)}%)`)
       .join("; ");
-    return `Period: ${rangeLabel}. ${typeLabels.totalLabel}: ${formatCurrency(totalSpent, "RM")}. ${typeLabels.topCategoryLabel}: ${topList}.`;
+    return `${rangeLabel}; ${typeLabels.totalLabel}: ${formatCurrency(totalSpent, "RM")}; ${typeLabels.topCategoryLabel}: ${topList}.`;
   }, [summaryItems, totalSpent, rangeLabel, typeLabels]);
 
   const todayContext = useMemo(() => {
@@ -508,7 +527,7 @@ export default function ReportPage() {
     });
 
     if (!todayRows.length) {
-      return "Today context: no transactions recorded today yet.";
+      return t.pages.noRecordsForDay;
     }
 
     const totalToday = todayRows.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -516,7 +535,7 @@ export default function ReportPage() {
     for (const row of todayRows) {
       const categoryName = row.category?.name
         ? getLocalizedCategoryLabel(row.category.name, language)
-        : t?.pages?.reportUncategorized || "Uncategorized";
+        : t.pages.reportUncategorized;
       categoryTotals.set(categoryName, (categoryTotals.get(categoryName) || 0) + Number(row.amount || 0));
     }
 
@@ -525,8 +544,9 @@ export default function ReportPage() {
       .map(([name, amount]) => `${name}: ${formatCurrency(amount, "RM")}`)
       .join("; ");
 
-    return `Today context (${selectedType}): total ${formatCurrency(totalToday, "RM")}; categories: ${breakdown}`;
-  }, [transactions, selectedType, language, t]);
+    const selectedTypeLabel = selectedType === "income" ? t.transactions.income : t.transactions.expense;
+    return `${selectedTypeLabel}; ${typeLabels.totalLabel}: ${formatCurrency(totalToday, "RM")}; ${typeLabels.detailsTitle}: ${breakdown}`;
+  }, [transactions, selectedType, language, t, typeLabels]);
 
   useEffect(() => {
     if (!totalSpent) {
@@ -534,7 +554,7 @@ export default function ReportPage() {
       return;
     }
     if (!personaPrompt) {
-      setSummaryAdvice(t?.pages?.reportNeedPersona || "Set a personality to get AI advice.");
+      setSummaryAdvice(t.pages.reportNeedPersona);
       return;
     }
 
@@ -551,7 +571,7 @@ export default function ReportPage() {
         setSummaryAdvice(text || "");
       })
       .catch(() => {
-        setSummaryAdvice(t?.pages?.reportSummaryFallback || "Review your top categories and plan next month wisely.");
+        setSummaryAdvice(t.pages.reportSummaryFallback);
       })
       .finally(() => {
         setIsSummaryLoading(false);
@@ -582,91 +602,93 @@ export default function ReportPage() {
       setAnswerText(text || "");
       setQuestionInput("");
     } catch (error) {
-      setAnswerText(t?.pages?.reportQuestionFailed || "Failed to answer. Please try again.");
+      setAnswerText(t.pages.reportQuestionFailed);
     } finally {
       setIsQuestionLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff5d6_0%,#fff9e8_36%,#e8f3ff_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto w-full max-w-5xl space-y-6 pb-24">
         <BackButton fallbackHref="/" preferFallback />
 
-        <section className="rounded-3xl border border-slate-300 bg-white p-6 shadow-sm">
+        <section className="relative overflow-hidden rounded-3xl border-2 border-slate-900 bg-gradient-to-br from-amber-200 via-yellow-100 to-sky-100 p-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+          <span className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/40" />
+          <span className="pointer-events-none absolute -left-6 -bottom-8 h-20 w-20 rounded-full bg-cyan-200/40" />
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-slate-900">{t?.pages?.report || "Report"}</h1>
-              <p className="mt-1 text-sm text-slate-500">{t?.pages?.reportDesc || ""}</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{t.pages.report}</h1>
+              <p className="mt-2 text-sm font-medium text-slate-700">{t.pages.reportDesc}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => switchType("expense")}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
                   !isIncome
-                    ? "border-amber-500 bg-amber-100 text-amber-900"
-                    : "border-slate-300 text-slate-700"
+                    ? "border-slate-900 bg-amber-300 text-slate-900"
+                    : "border-slate-500 bg-white/80 text-slate-700"
                 }`}
               >
-                {t?.transactions?.expense || "Expense"}
+                {t.transactions.expense}
               </button>
               <button
                 type="button"
                 onClick={() => switchType("income")}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
                   isIncome
-                    ? "border-cyan-500 bg-cyan-100 text-cyan-900"
-                    : "border-slate-300 text-slate-700"
+                    ? "border-slate-900 bg-cyan-300 text-slate-900"
+                    : "border-slate-500 bg-white/80 text-slate-700"
                 }`}
               >
-                {t?.transactions?.income || "Income"}
+                {t.transactions.income}
               </button>
               <button
                 type="button"
                 onClick={() => setRange("month")}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
                   range === "month"
                     ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 text-slate-700"
+                    : "border-slate-500 bg-white/80 text-slate-700"
                 }`}
               >
-                {t?.pages?.month1 || "1 Month"}
+                {t.pages.month1}
               </button>
               <button
                 type="button"
                 onClick={() => setRange("half")}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
                   range === "half"
                     ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 text-slate-700"
+                    : "border-slate-500 bg-white/80 text-slate-700"
                 }`}
               >
-                {t?.pages?.month6 || "6 Months"}
+                {t.pages.month6}
               </button>
               <button
                 type="button"
                 onClick={() => setRange("year")}
-                className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-full border-2 px-4 py-2 text-sm font-bold transition ${
                   range === "year"
                     ? "border-slate-900 bg-slate-900 text-white"
-                    : "border-slate-300 text-slate-700"
+                    : "border-slate-500 bg-white/80 text-slate-700"
                 }`}
               >
-                {t?.pages?.year1 || "1 Year"}
+                {t.pages.year1}
               </button>
             </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border-2 border-slate-900 bg-white/95 p-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                {t?.forecast?.reportTitle || "AI Balance Forecast"}
+              <h2 className="text-xl font-extrabold tracking-tight text-slate-900">
+                {t.forecast.reportTitle}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {t?.forecast?.reportDesc || "Predicted balance based on your recent spending and income pattern."}
+              <p className="mt-1 text-sm font-medium text-slate-600">
+                {t.forecast.reportDesc}
               </p>
             </div>
             <button
@@ -681,67 +703,67 @@ export default function ReportPage() {
                   });
                   const payload = await response.json();
                   if (!response.ok) {
-                    throw new Error(payload.message || "Failed to load forecast.");
+                    throw new Error(payload.message || "");
                   }
                   setForecastData(payload.data || null);
                 } catch (requestError) {
-                  setForecastError(requestError.message || "Failed to load forecast.");
+                  setForecastError(t.forecast.loadFailed);
                 } finally {
                   setIsForecastLoading(false);
                 }
               }}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900"
+              className="rounded-full border-2 border-slate-900 bg-white px-4 py-2 text-sm font-bold text-slate-800 transition hover:bg-amber-100"
             >
-              {t?.forecast?.refresh || "Refresh forecast"}
+              {t.forecast.refresh}
             </button>
           </div>
 
           {isForecastLoading ? (
-            <p className="mt-4 text-sm text-slate-500">{t?.forecast?.loading || "Loading forecast..."}</p>
+            <p className="mt-4 text-sm text-slate-500">{t.forecast.loading}</p>
           ) : forecastError ? (
             <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
               {forecastError}
             </p>
           ) : forecastData ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4">
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-500">
-                  {t?.forecast?.currentBalance || "Current balance"}
+                  {t.forecast.currentBalance}
                 </p>
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatCurrency(forecastData.currentBalance, forecastData.currency || "RM")}
                 </p>
               </div>
-              <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+              <div className="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-white p-4">
                 <p className="text-xs uppercase tracking-[0.12em] text-cyan-700">
-                  {t?.forecast?.weekAhead || "7 Days"}
+                  {t.forecast.weekAhead}
                 </p>
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatCurrency(forecastData.forecast7, forecastData.currency || "RM")}
                 </p>
               </div>
-              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+              <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-white p-4">
                 <p className="text-xs uppercase tracking-[0.12em] text-indigo-700">
-                  {t?.forecast?.monthAhead || "30 Days"}
+                  {t.forecast.monthAhead}
                 </p>
                 <p className="mt-2 text-xl font-bold text-slate-900">
                   {formatCurrency(forecastData.forecast30, forecastData.currency || "RM")}
                 </p>
               </div>
               <div className="sm:col-span-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                {forecastData.aiSummary || t?.forecast?.fallback || "Forecast generated from your recent cashflow pattern."}
+                {forecastData.aiSummary || t.forecast.fallback}
               </div>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-500">{t?.forecast?.empty || "No forecast data yet."}</p>
+            <p className="mt-4 text-sm text-slate-500">{t.forecast.empty}</p>
           )}
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">{typeLabels.summaryTitle}</h2>
+          <div className="rounded-3xl border-2 border-slate-900 bg-white/95 p-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-900">{typeLabels.summaryTitle}</h2>
             {isLoading ? (
-              <p className="mt-4 text-sm text-slate-400">{t?.pages?.reportLoading || "Loading report..."}</p>
+              <p className="mt-4 text-sm text-slate-400">{t.pages.reportLoading}</p>
             ) : summaryItems.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">{typeLabels.noData}</p>
             ) : (
@@ -753,7 +775,8 @@ export default function ReportPage() {
                     ))}
                     <circle cx="110" cy="110" r="54" fill="white" />
                     <text x="110" y="110" textAnchor="middle" dominantBaseline="middle" className="fill-slate-800 text-sm">
-                      {formatCurrency(totalSpent, "RM")}
+                      <title>{formatCurrency(totalSpent, "RM")}</title>
+                      {formatCompactCurrency(totalSpent, "RM")}
                     </text>
                   </svg>
                   <div className="flex-1 space-y-2">
@@ -770,9 +793,12 @@ export default function ReportPage() {
                           </button>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="w-[56px] text-center text-slate-500 tabular-nums">{item.percent.toFixed(0)}%</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">
-                            {formatCurrency(item.total, "RM")}
+                          <span className="w-[58px] text-right text-slate-500 tabular-nums">{item.percent.toFixed(0)}%</span>
+                          <span
+                            className="w-[118px] text-right font-semibold text-slate-800 tabular-nums"
+                            title={formatCurrency(item.total, "RM")}
+                          >
+                            {formatCompactCurrency(item.total, "RM")}
                           </span>
                         </div>
                       </div>
@@ -780,7 +806,7 @@ export default function ReportPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 text-sm text-slate-700">
+                <div className="space-y-2 rounded-2xl border border-slate-200 bg-gradient-to-r from-amber-50/70 to-cyan-50/70 p-4 text-sm text-slate-700">
                   {summaryPoints.map((point) => (
                     <div key={point} className="flex items-start gap-2">
                       <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
@@ -789,7 +815,7 @@ export default function ReportPage() {
                   ))}
                   <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                     {isSummaryLoading
-                      ? t?.pages?.reportAiLoading || "Generating advice..."
+                      ? t.pages.reportAiLoading
                       : summaryAdvice}
                   </div>
                 </div>
@@ -797,10 +823,10 @@ export default function ReportPage() {
             )}
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">{typeLabels.detailsTitle}</h2>
+          <div className="rounded-3xl border-2 border-slate-900 bg-white/95 p-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-900">{typeLabels.detailsTitle}</h2>
             {isLoading ? (
-              <p className="mt-4 text-sm text-slate-400">{t?.pages?.reportLoading || "Loading report..."}</p>
+              <p className="mt-4 text-sm text-slate-400">{t.pages.reportLoading}</p>
             ) : summaryItems.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">{typeLabels.noData}</p>
             ) : (
@@ -819,8 +845,11 @@ export default function ReportPage() {
                         <span className="h-3 w-3 shrink-0 rounded-[4px] ring-1 ring-slate-200" style={{ backgroundColor: category.displayColor }} />
                         <span className="text-sm font-semibold text-slate-900">{category.name}</span>
                       </div>
-                      <div className="text-sm font-semibold text-slate-700">
-                        {formatCurrency(category.total, "RM")} ({category.percent.toFixed(0)}%)
+                      <div
+                        className="text-sm font-semibold text-slate-700"
+                        title={formatCurrency(category.total, "RM")}
+                      >
+                        {formatCompactCurrency(category.total, "RM")} ({category.percent.toFixed(0)}%)
                       </div>
                     </div>
                     <div className="mt-3 space-y-2">
@@ -829,11 +858,14 @@ export default function ReportPage() {
                           <div>
                             <p className="font-semibold text-slate-700">{item.title}</p>
                             <p className="text-[11px] text-slate-400">
-                              {new Date(item.transactionDate).toLocaleDateString()}
+                              {new Date(item.transactionDate).toLocaleDateString(locale)}
                             </p>
                           </div>
-                          <span className="font-semibold text-slate-800">
-                            {formatCurrency(item.amount, "RM")}
+                          <span
+                            className="w-[100px] text-right font-semibold text-slate-800 tabular-nums"
+                            title={formatCurrency(item.amount, "RM")}
+                          >
+                            {formatCompactCurrency(item.amount, "RM")}
                           </span>
                         </div>
                       ))}
@@ -846,8 +878,8 @@ export default function ReportPage() {
         </section>
 
         {answerText ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-700 shadow-sm">
-            <p className="font-semibold text-slate-900">{t?.pages?.reportAiAnswer || "AI Answer"}</p>
+          <section className="rounded-3xl border-2 border-slate-900 bg-white p-6 text-sm text-slate-700 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.45)]">
+            <p className="font-semibold text-slate-900">{t.pages.reportAiAnswer}</p>
             <p className="mt-2">{answerText}</p>
           </section>
         ) : null}
@@ -859,7 +891,7 @@ export default function ReportPage() {
 
       <form
         onSubmit={handleQuestionSubmit}
-        className="fixed bottom-0 left-0 right-0 border-t-2 border-slate-300 bg-white/90 px-4 py-3 backdrop-blur"
+        className="fixed bottom-0 left-0 right-0 border-t-2 border-slate-900/15 bg-white/92 px-4 py-3 backdrop-blur"
       >
         <div className="mx-auto flex w-full max-w-5xl items-center gap-3">
           <input
@@ -868,31 +900,24 @@ export default function ReportPage() {
             onChange={(event) => setQuestionInput(event.target.value)}
             placeholder={
               isIncome
-                ? t?.pages?.reportIncomeAskPlaceholder || "Ask the AI about your income..."
-                : t?.pages?.reportAskPlaceholder || "Ask the AI about your spending..."
+                ? t.pages.reportIncomeAskPlaceholder
+                : t.pages.reportAskPlaceholder
             }
-            className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none"
+            className="flex-1 rounded-full border-2 border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-cyan-500"
             disabled={isQuestionLoading}
           />
           <button
             type="submit"
             disabled={isQuestionLoading || !questionInput.trim() || !personaPrompt}
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border-2 border-slate-900 bg-amber-300 px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {t?.pages?.reportAskButton || "Ask"}
+            {t.pages.reportAskButton}
           </button>
         </div>
       </form>
     </main>
   );
 }
-
-
-
-
-
-
-
 
 
 

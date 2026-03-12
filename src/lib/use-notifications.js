@@ -74,10 +74,27 @@ export function useNotifications() {
     persist(next);
   }, [notifications, persist]);
 
+  const deleteNotifications = useCallback(
+    (ids = []) => {
+      if (!Array.isArray(ids) || ids.length === 0) return;
+      const idSet = new Set(ids.filter(Boolean).map((item) => String(item)));
+      if (idSet.size === 0) return;
+      const next = notifications.filter((item) => !idSet.has(String(item.id)));
+      persist(next);
+    },
+    [notifications, persist]
+  );
+
+  const deleteAllNotifications = useCallback(() => {
+    persist([]);
+  }, [persist]);
+
   return {
     notifications,
     setNotifications: persist,
     markAllRead,
+    deleteNotifications,
+    deleteAllNotifications,
     unreadCount,
     ready,
   };

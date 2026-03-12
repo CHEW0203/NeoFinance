@@ -6,7 +6,7 @@ import {
 } from "@/services/transaction-api";
 import { getLocalDateKey } from "@/utils/date-key";
 import { DEFAULT_LANGUAGE, LANGUAGE_COOKIE_NAME } from "@/lib/i18n/config";
-import { getDictionary, normalizeLanguage } from "@/lib/i18n";
+import { getDictionary, getLocaleFromLanguage, normalizeLanguage } from "@/lib/i18n";
 
 const TARGET_KEY = "ft_daily_target";
 const TARGET_DATE_KEY = "ft_daily_target_date";
@@ -59,7 +59,7 @@ function isSameDay(first, second) {
   );
 }
 
-function appendNotification({ title, message }) {
+function appendNotification({ title, message, locale }) {
   const now = new Date();
   const existing = safeParse(window.localStorage.getItem(NOTIFICATIONS_KEY), []);
   const next = [
@@ -68,7 +68,7 @@ function appendNotification({ title, message }) {
       id: `target-${now.getTime()}-${Math.floor(Math.random() * 1000)}`,
       title,
       message,
-      time: now.toLocaleString(),
+      time: now.toLocaleString(locale),
       isRead: false,
     },
   ];
@@ -79,7 +79,7 @@ function appendNotification({ title, message }) {
 function getFriendlyErrorMessage(error, t) {
   const message = String(error?.message || "").toLowerCase();
   if (message.includes("high demand") || message.includes("quota") || message.includes("rate")) {
-    return t?.target?.fallback?.busy || "(._.) Please wait a moment and try again.";
+    return t.target.fallback.busy;
   }
   return null;
 }
@@ -103,7 +103,7 @@ async function fetchPersonaMessage(payload, language) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data?.error || "Failed to generate response.");
+    throw new Error(data?.error || "");
   }
 
   return data?.text || "";
@@ -120,13 +120,14 @@ async function checkTargetNotifications(rows) {
 
   const personaPrompt = window.localStorage.getItem(PERSONA_KEY) || "";
   const language = readCookieLanguage();
+  const locale = getLocaleFromLanguage(language);
   const t = getDictionary(language);
   const targetFallback = t?.target?.fallback || {};
   const targetNotifications = t?.target?.notifications || {};
   const notificationTitles = {
-    halfwayAlert: targetNotifications.halfwayAlert || "Halfway Alert",
-    targetReached: targetNotifications.targetReached || "Target Reached",
-    overBudget: targetNotifications.overBudget || "Over Budget",
+    halfwayAlert: targetNotifications.halfwayAlert,
+    targetReached: targetNotifications.targetReached,
+    overBudget: targetNotifications.overBudget,
   };
 
   const today = new Date();
@@ -184,13 +185,13 @@ async function checkTargetNotifications(rows) {
             },
             language
           )
-        : targetFallback.cautionHalf || "(._.) You are halfway there. Keep it under control.";
-      appendNotification({ title: notificationTitles.halfwayAlert, message: text });
+        : targetFallback.cautionHalf;
+      appendNotification({ title: notificationTitles.halfwayAlert, message: text, locale });
       if (text) window.localStorage.setItem(PERSONA_REPLY_KEY, text);
     } catch (err) {
       const friendly = getFriendlyErrorMessage(err, t);
-      const fallback = friendly || targetFallback.cautionHalf || "(._.) You are halfway there. Keep it under control.";
-      appendNotification({ title: notificationTitles.halfwayAlert, message: fallback });
+      const fallback = friendly || targetFallback.cautionHalf;
+      appendNotification({ title: notificationTitles.halfwayAlert, message: fallback, locale });
       window.localStorage.setItem(PERSONA_REPLY_KEY, fallback);
     }
   }
@@ -211,13 +212,13 @@ async function checkTargetNotifications(rows) {
             },
             language
           )
-        : targetFallback.targetReached || "(._.) You have reached your target for today.";
-      appendNotification({ title: notificationTitles.targetReached, message: text });
+        : targetFallback.targetReached;
+      appendNotification({ title: notificationTitles.targetReached, message: text, locale });
       if (text) window.localStorage.setItem(PERSONA_REPLY_KEY, text);
     } catch (err) {
       const friendly = getFriendlyErrorMessage(err, t);
-      const fallback = friendly || targetFallback.targetReached || "(._.) You have reached your target for today.";
-      appendNotification({ title: notificationTitles.targetReached, message: fallback });
+      const fallback = friendly || targetFallback.targetReached;
+      appendNotification({ title: notificationTitles.targetReached, message: fallback, locale });
       window.localStorage.setItem(PERSONA_REPLY_KEY, fallback);
     }
   }
@@ -238,13 +239,13 @@ async function checkTargetNotifications(rows) {
             },
             language
           )
-        : targetFallback.overBudget || "(>_<) You are over budget. Pause spending for now.";
-      appendNotification({ title: notificationTitles.overBudget, message: text });
+        : targetFallback.overBudget;
+      appendNotification({ title: notificationTitles.overBudget, message: text, locale });
       if (text) window.localStorage.setItem(PERSONA_REPLY_KEY, text);
     } catch (err) {
       const friendly = getFriendlyErrorMessage(err, t);
-      const fallback = friendly || targetFallback.overBudget || "(>_<) You are over budget. Pause spending for now.";
-      appendNotification({ title: notificationTitles.overBudget, message: fallback });
+      const fallback = friendly || targetFallback.overBudget;
+      appendNotification({ title: notificationTitles.overBudget, message: fallback, locale });
       window.localStorage.setItem(PERSONA_REPLY_KEY, fallback);
     }
   }
@@ -255,14 +256,15 @@ async function checkStreakNotifications(rows) {
 
   const personaPrompt = window.localStorage.getItem(PERSONA_KEY) || "";
   const language = readCookieLanguage();
+  const locale = getLocaleFromLanguage(language);
   const t = getDictionary(language);
   const streakCopy = t?.streak || {};
   const streakFallback = streakCopy.fallback || {};
   const streakNotifications = streakCopy.notifications || {};
   const notificationTitles = {
-    continue: streakNotifications.streakContinue || "Streak Update",
-    break: streakNotifications.streakBreak || "Streak Reset",
-    milestone: streakNotifications.streakMilestone || "Streak Milestone",
+    continue: streakNotifications.streakContinue,
+    break: streakNotifications.streakBreak,
+    milestone: streakNotifications.streakMilestone,
   };
 
   const today = new Date();
@@ -345,16 +347,15 @@ async function checkStreakNotifications(rows) {
     let fallback = "";
     if (result.success) {
       if (isMilestone) {
-        fallback = (streakFallback.streakMilestone || "(^_^) Amazing! You hit a {count}-day streak!").replace(
+        fallback = streakFallback.streakMilestone.replace(
           "{count}",
           String(result.streak)
         );
       } else {
-        fallback = streakFallback.streakContinue || "(^_^) Nice! You kept your streak going.";
+        fallback = streakFallback.streakContinue;
       }
     } else {
-      fallback =
-        streakFallback.streakBreak || "(._.) It's okay to miss a day. Let's start again tomorrow.";
+      fallback = streakFallback.streakBreak;
     }
 
     try {
@@ -370,13 +371,13 @@ async function checkStreakNotifications(rows) {
             language
           )
         : fallback;
-      appendNotification({ title, message: text || fallback });
+      appendNotification({ title, message: text || fallback, locale });
       const reply = text || fallback;
       if (reply) window.localStorage.setItem(PERSONA_REPLY_KEY, reply);
     } catch (err) {
       const friendly = getFriendlyErrorMessage(err, t);
       const reply = friendly || fallback;
-      appendNotification({ title, message: reply });
+      appendNotification({ title, message: reply, locale });
       window.localStorage.setItem(PERSONA_REPLY_KEY, reply);
     }
   }
@@ -421,8 +422,9 @@ export function useTransactions() {
       setTransactions(rows);
       await checkTargetNotifications(rows);
       await checkStreakNotifications(rows);
-    } catch (loadError) {
-      setError(loadError.message || "Failed to load transactions.");
+    } catch {
+      const dict = getDictionary(readCookieLanguage());
+      setError(dict.transactions.initFailed);
     } finally {
       setIsLoading(false);
     }
@@ -446,8 +448,9 @@ export function useTransactions() {
       });
       setForm(INITIAL_FORM);
       await loadTransactions();
-    } catch (submitError) {
-      setError(submitError.message || "Failed to create transaction.");
+    } catch {
+      const dict = getDictionary(readCookieLanguage());
+      setError(dict.transactions.saveFailed);
     } finally {
       setIsSubmitting(false);
     }
@@ -458,8 +461,9 @@ export function useTransactions() {
     try {
       await deleteTransaction(id);
       await loadTransactions();
-    } catch (deleteError) {
-      setError(deleteError.message || "Failed to delete transaction.");
+    } catch {
+      const dict = getDictionary(readCookieLanguage());
+      setError(dict.transactions.deleteFailed);
     }
   }
 
@@ -474,8 +478,6 @@ export function useTransactions() {
     removeTransaction,
   };
 }
-
-
 
 
 

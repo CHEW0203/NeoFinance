@@ -5,6 +5,7 @@ import { BackButton } from "@/components/back-button";
 import { formatCurrency } from "@/utils/format";
 import { useLanguage } from "@/hooks/use-language";
 import { getLocaleFromLanguage } from "@/lib/i18n";
+import { getLocalizedCategoryLabel } from "@/lib/i18n/category-labels";
 import { getLocalDateKey } from "@/utils/date-key";
 
 function getMonthBounds(baseDate) {
@@ -70,6 +71,21 @@ export default function CalendarPage() {
   for (let i = 1; i <= last.getDate(); i += 1) {
     days.push(new Date(first.getFullYear(), first.getMonth(), i));
   }
+  const leadingEmpty = first.getDay();
+  const dayCells = [
+    ...Array.from({ length: leadingEmpty }, (_, index) => ({
+      key: `empty-${index}`,
+      day: null,
+    })),
+    ...days.map((day) => ({ key: toKey(day), day })),
+  ];
+  const sundayBase = new Date(Date.UTC(2024, 0, 7));
+  const weekLabels = Array.from({ length: 7 }, (_, index) =>
+    new Date(sundayBase.getTime() + index * 24 * 60 * 60 * 1000).toLocaleDateString(locale, {
+      weekday: "short",
+      timeZone: "UTC",
+    })
+  );
 
   const selectedKey = toKey(selectedDate);
   const selectedRecords = grouped.get(selectedKey) || [];
@@ -117,16 +133,16 @@ export default function CalendarPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff6da_0%,#eef7ff_38%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto w-full max-w-3xl space-y-5">
         <BackButton fallbackHref="/" preferFallback />
 
-        <section className="rounded-3xl border border-slate-300 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
+        <section className="rounded-3xl border-2 border-slate-900 bg-white/95 p-5 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+          <div className="mb-3 flex items-center justify-between">
             <button
               type="button"
               onClick={goPrev}
-              className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold"
+              className="rounded-full border-2 border-slate-900 bg-white px-3 py-2 text-sm font-black transition hover:bg-amber-100"
             >
               {"\u2190"}
             </button>
@@ -134,8 +150,8 @@ export default function CalendarPage() {
             <button
               type="button"
               onClick={openPicker}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xl font-semibold transition hover:border-slate-400"
-              title={t.menu?.calendar || "Calendar"}
+              className="rounded-2xl border-2 border-slate-900 bg-amber-200 px-4 py-2 text-lg font-extrabold tracking-tight transition hover:bg-amber-300"
+              title={t.menu.calendar}
             >
               {monthLabel}
             </button>
@@ -152,44 +168,57 @@ export default function CalendarPage() {
             <button
               type="button"
               onClick={goNext}
-              className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold"
+              className="rounded-full border-2 border-slate-900 bg-white px-3 py-2 text-sm font-black transition hover:bg-sky-100"
             >
               {"\u2192"}
             </button>
           </div>
 
           <div
-            className="grid grid-cols-7 gap-2"
+            className="rounded-2xl border border-slate-200 bg-gradient-to-b from-sky-50 to-white p-3"
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
-            {days.map((day) => {
-              const key = toKey(day);
-              const hasRecord = grouped.has(key);
-              const selected = key === selectedKey;
-              return (
-                <button
-                  type="button"
-                  key={key}
-                  onClick={() => setSelectedDate(day)}
-                  className={`relative rounded-xl border px-2 py-3 text-sm font-semibold ${
-                    selected
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                      : "border-slate-200 bg-white text-slate-800"
-                  }`}
-                >
-                  {day.getDate()}
-                  {hasRecord ? (
-                    <span className="absolute bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-red-500" />
-                  ) : null}
-                </button>
-              );
-            })}
+            <div className="mb-2 grid grid-cols-7 gap-2">
+              {weekLabels.map((label, index) => (
+                <p key={`${label}-${index}`} className="text-center text-xs font-black uppercase text-slate-500">
+                  {label}
+                </p>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {dayCells.map((cell) => {
+                if (!cell.day) {
+                  return <div key={cell.key} className="h-11 rounded-xl bg-transparent" />;
+                }
+                const day = cell.day;
+                const key = toKey(day);
+                const hasRecord = grouped.has(key);
+                const selected = key === selectedKey;
+                return (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => setSelectedDate(day)}
+                    className={`relative h-11 rounded-xl border text-sm font-bold transition ${
+                      selected
+                        ? "border-slate-900 bg-amber-300 text-slate-900 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-800 hover:border-sky-300 hover:bg-sky-50"
+                    }`}
+                  >
+                    {day.getDate()}
+                    {hasRecord ? (
+                      <span className="absolute bottom-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-rose-500" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-300 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-900">
+        <section className="rounded-3xl border-2 border-slate-900 bg-white p-6 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+          <h2 className="text-xl font-extrabold tracking-tight text-slate-900">
             {new Date(selectedDate).toLocaleDateString(locale, {
               weekday: "long",
               month: "short",
@@ -199,20 +228,24 @@ export default function CalendarPage() {
           </h2>
           <div className="mt-4 space-y-3">
             {selectedRecords.length === 0 ? (
-              <p className="text-sm text-slate-500">{t.pages.noRecordsForDay}</p>
+              <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                {t.pages.noRecordsForDay}
+              </p>
             ) : null}
             {selectedRecords.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
+                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-sky-50 px-4 py-3"
               >
                 <div>
                   <p className="font-semibold text-slate-900">
-                    {item.category?.name || t.dashboard.others}
+                    {item.category?.name
+                      ? getLocalizedCategoryLabel(item.category.name, language)
+                      : t.dashboard.others}
                   </p>
                   <p className="text-sm text-slate-500">{item.title}</p>
                 </div>
-                <p className="font-semibold text-slate-900">
+                <p className={`font-semibold ${item.type === "income" ? "text-emerald-600" : "text-amber-500"}`}>
                   {item.type === "income" ? "+" : "-"}
                   {formatCurrency(item.amount, "RM")}
                 </p>

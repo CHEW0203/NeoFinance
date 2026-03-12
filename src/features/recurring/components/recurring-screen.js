@@ -3,21 +3,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
+import { getLocaleFromLanguage } from "@/lib/i18n";
+import {
+  getLocalizedCategoryLabel,
+  toCanonicalCategoryName,
+} from "@/lib/i18n/category-labels";
 import { getLocalDateKey } from "@/utils/date-key";
 import { formatCurrency } from "@/utils/format";
 
 const TYPE_OPTIONS = ["expense", "income"];
 const FREQUENCY_OPTIONS = ["daily", "weekly", "monthly"];
 
-function formatRuleDate(value) {
+function formatRuleDate(value, locale) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString(locale);
 }
 
 function safeMessage(error, fallback) {
-  return error?.message || fallback;
+  return fallback;
 }
 
 function toPositiveNumber(value) {
@@ -28,14 +33,15 @@ function toPositiveNumber(value) {
 
 function FieldLabel({ children }) {
   return (
-    <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+    <p className="mb-1.5 text-xs font-bold uppercase tracking-[0.14em] text-slate-600">
       {children}
     </p>
   );
 }
 
 export function RecurringScreen() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const locale = getLocaleFromLanguage(language);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rules, setRules] = useState([]);
@@ -59,13 +65,15 @@ export function RecurringScreen() {
     [categories, form.type]
   );
 
-  const categoryOptions = useMemo(
-    () =>
-      filteredCategories
-        .map((item) => String(item.name || "").trim())
-        .filter(Boolean),
-    [filteredCategories]
-  );
+  const categoryOptions = useMemo(() => {
+    return filteredCategories
+      .map((item) => String(item.name || "").trim())
+      .filter(Boolean)
+      .map((rawName) => ({
+        rawName,
+        label: getLocalizedCategoryLabel(rawName, language),
+      }));
+  }, [filteredCategories, language]);
 
   async function loadData() {
     setIsLoading(true);
@@ -74,7 +82,7 @@ export function RecurringScreen() {
       const response = await fetch("/api/recurring", { cache: "no-store" });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.message || "Failed to load recurring transactions.");
+        throw new Error(payload.message || t.recurring.loadFailed);
       }
       const nextRules = payload.data || [];
       const nextCategories = payload.categories || [];
@@ -82,7 +90,7 @@ export function RecurringScreen() {
       setRules(nextRules);
       setCategories(nextCategories);
     } catch (requestError) {
-      setError(safeMessage(requestError, "Failed to load recurring transactions."));
+      setError(safeMessage(requestError, t.recurring.loadFailed));
     } finally {
       setIsLoading(false);
     }
@@ -90,6 +98,7 @@ export function RecurringScreen() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(event) {
@@ -99,15 +108,16 @@ export function RecurringScreen() {
 
     const amount = toPositiveNumber(form.amount);
     if (!amount) {
-      setError(t.recurring?.amountInvalid || "Amount must be greater than 0.");
+      setError(t.recurring.amountInvalid);
       return;
     }
     if (!form.title.trim()) {
-      setError(t.recurring?.titleRequired || "Title is required.");
+      setError(t.recurring.titleRequired);
       return;
     }
-    if (!form.categoryName.trim()) {
-      setError(t.recurring?.selectCategory || "Please select or type a category.");
+    const normalizedCategoryName = toCanonicalCategoryName(form.categoryName.trim());
+    if (!normalizedCategoryName) {
+      setError(t.recurring.selectCategory);
       return;
     }
 
@@ -123,12 +133,12 @@ export function RecurringScreen() {
           type: form.type,
           frequency: form.frequency,
           startDate: form.startDate,
-          categoryName: form.categoryName.trim(),
+          categoryName: normalizedCategoryName,
         }),
       });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.message || "Failed to create recurring transaction.");
+        throw new Error(payload.message || t.recurring.createFailed);
       }
 
       setForm((prev) => ({
@@ -138,11 +148,11 @@ export function RecurringScreen() {
         amount: "",
         categoryName: "",
       }));
-      setSuccess(t.recurring?.createdActive || "Recurring transaction created and activated.");
+      setSuccess(t.recurring.createdActive);
       await loadData();
       window.dispatchEvent(new Event("neo:transactions-updated"));
     } catch (requestError) {
-      setError(safeMessage(requestError, "Failed to create recurring transaction."));
+      setError(safeMessage(requestError, t.recurring.createFailed));
     } finally {
       setIsSubmitting(false);
     }
@@ -159,16 +169,16 @@ export function RecurringScreen() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.message || "Failed to update recurring transaction.");
+        throw new Error(payload.message || t.recurring.updateFailed);
       }
       setRules((prev) => prev.map((item) => (item.id === rule.id ? payload.data : item)));
       setSuccess(
         shouldResume
-          ? t.recurring?.resumed || "Recurring transaction resumed."
-          : t.recurring?.paused || "Recurring transaction paused."
+          ? t.recurring.resumed
+          : t.recurring.paused
       );
     } catch (requestError) {
-      setError(safeMessage(requestError, "Failed to update recurring transaction."));
+      setError(safeMessage(requestError, t.recurring.updateFailed));
     }
   }
 
@@ -179,81 +189,82 @@ export function RecurringScreen() {
       const response = await fetch(`/api/recurring/${ruleId}`, { method: "DELETE" });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.message || "Failed to delete recurring transaction.");
+        throw new Error(payload.message || t.recurring.deleteFailed);
       }
       setRules((prev) => prev.filter((item) => item.id !== ruleId));
-      setSuccess(t.recurring?.deleted || "Recurring transaction deleted.");
+      setSuccess(t.recurring.deleted);
       setPendingDeleteId("");
     } catch (requestError) {
-      setError(safeMessage(requestError, "Failed to delete recurring transaction."));
+      setError(safeMessage(requestError, t.recurring.deleteFailed));
     }
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff6da_0%,#eef7ff_36%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto w-full max-w-3xl space-y-5">
         <BackButton fallbackHref="/" preferFallback />
 
-        <section className="rounded-3xl border border-slate-300 bg-white p-6 shadow-sm">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {t.recurring?.title || "Recurring Transactions"}
+        <section className="relative overflow-hidden rounded-3xl border-2 border-slate-900 bg-gradient-to-br from-amber-200 via-yellow-100 to-sky-100 p-6 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.45)]">
+          <span className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/45" />
+          <span className="pointer-events-none absolute -left-6 -bottom-8 h-20 w-20 rounded-full bg-cyan-200/45" />
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
+            {t.recurring.title}
           </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            {t.recurring?.description ||
-              "Automatically create salary, rent, utilities, and other repeating records."}
+          <p className="mt-2 text-sm font-medium text-slate-700">
+            {t.recurring.description}
           </p>
         </section>
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 rounded-3xl border border-slate-300 bg-white p-5 shadow-sm"
+          className="space-y-4 rounded-3xl border-2 border-slate-900 bg-white/95 p-5 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.4)]"
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
-              <FieldLabel>{t.recurring?.titleLabel || "Title"}</FieldLabel>
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-amber-50 to-white p-3 sm:col-span-2">
+              <FieldLabel>{t.recurring.titleLabel}</FieldLabel>
               <input
                 type="text"
                 value={form.title}
                 onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                placeholder={t.recurring?.titlePlaceholder || "Title (example: Salary)"}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-800"
+                placeholder={t.recurring.titlePlaceholder}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
                 required
               />
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <FieldLabel>{t.recurring?.amountLabel || "Amount"}</FieldLabel>
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-sky-50 to-white p-3">
+              <FieldLabel>{t.recurring.amountLabel}</FieldLabel>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
                 value={form.amount}
                 onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
-                placeholder={t.recurring?.amountPlaceholder || "Amount"}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-800"
+                placeholder={t.recurring.amountPlaceholder}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
                 required
               />
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <FieldLabel>{t.recurring?.typeLabel || "Type"}</FieldLabel>
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-rose-50 to-white p-3">
+              <FieldLabel>{t.recurring.typeLabel}</FieldLabel>
               <select
                 value={form.type}
                 onChange={(event) => setForm((prev) => ({ ...prev, type: event.target.value }))}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-800"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
               >
                 {TYPE_OPTIONS.map((item) => (
                   <option key={item} value={item}>
                     {item === "income"
-                      ? t.transactions?.income || "Income"
-                      : t.transactions?.expense || "Expense"}
+                      ? t.transactions.income
+                      : t.transactions.expense}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <FieldLabel>{t.recurring?.categoryLabel || "Category"}</FieldLabel>
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-cyan-50 to-white p-3">
+              <FieldLabel>{t.recurring.categoryLabel}</FieldLabel>
               <input
                 type="text"
                 list="recurring-category-options"
@@ -261,85 +272,85 @@ export function RecurringScreen() {
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, categoryName: event.target.value }))
                 }
-                placeholder={t.recurring?.categoryPlaceholder || "Type category or choose suggestion"}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-800"
+                placeholder={t.recurring.categoryPlaceholder}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
               />
               <datalist id="recurring-category-options">
                 {categoryOptions.map((item) => (
-                  <option key={item} value={item} />
+                  <option key={item.rawName} value={item.label} />
                 ))}
               </datalist>
               {categoryOptions.length ? (
                 <div className="mt-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto">
-                  {categoryOptions.map((name) => {
-                    const isActive = form.categoryName.trim().toLowerCase() === name.toLowerCase();
+                  {categoryOptions.map((item) => {
+                    const isActive =
+                      toCanonicalCategoryName(form.categoryName).toLowerCase() ===
+                      toCanonicalCategoryName(item.rawName).toLowerCase();
                     return (
                       <button
-                        key={name}
+                        key={item.rawName}
                         type="button"
-                        onClick={() => setForm((prev) => ({ ...prev, categoryName: name }))}
+                        onClick={() => setForm((prev) => ({ ...prev, categoryName: item.label }))}
                         className={
                           isActive
-                            ? "rounded-full border border-cyan-300 bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-900"
-                            : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-900"
+                            ? "rounded-full border-2 border-slate-900 bg-amber-300 px-3 py-1 text-xs font-bold text-slate-900"
+                            : "rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-900"
                         }
                       >
-                        {name}
+                        {item.label}
                       </button>
                     );
                   })}
                 </div>
               ) : null}
               <p className="mt-1.5 text-xs text-slate-500">
-                {t.recurring?.categoryHint ||
-                  "You can type your own category. AI will try to match a suitable icon."}
+                {t.recurring.categoryHint}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <FieldLabel>{t.recurring?.frequencyLabel || "Frequency"}</FieldLabel>
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-50 to-white p-3">
+              <FieldLabel>{t.recurring.frequencyLabel}</FieldLabel>
               <select
                 value={form.frequency}
                 onChange={(event) => setForm((prev) => ({ ...prev, frequency: event.target.value }))}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-800"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
               >
                 {FREQUENCY_OPTIONS.map((item) => (
                   <option key={item} value={item}>
                     {item === "daily"
-                      ? t.recurring?.daily || "Daily"
+                      ? t.recurring.daily
                       : item === "weekly"
-                      ? t.recurring?.weekly || "Weekly"
-                      : t.recurring?.monthly || "Monthly"}
+                      ? t.recurring.weekly
+                      : t.recurring.monthly}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
-              <FieldLabel>{t.recurring?.startDateLabel || "Start date"}</FieldLabel>
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-emerald-50 to-white p-3 sm:col-span-2">
+              <FieldLabel>{t.recurring.startDateLabel}</FieldLabel>
               <input
                 type="date"
                 value={form.startDate}
                 onChange={(event) =>
                   setForm((prev) => ({ ...prev, startDate: event.target.value }))
                 }
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-800"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
                 required
               />
               <p className="mt-1.5 text-xs text-slate-500">
-                {t.recurring?.startDateHint ||
-                  "This rule starts from the selected date. No end date is required."}
+                {t.recurring.startDateHint}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
-              <FieldLabel>{t.recurring?.noteLabel || "Note (optional)"}</FieldLabel>
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-rose-50 to-white p-3 sm:col-span-2">
+              <FieldLabel>{t.recurring.noteLabel}</FieldLabel>
               <input
                 type="text"
                 value={form.note}
                 onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
-                placeholder={t.recurring?.notePlaceholder || "Note (optional)"}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-800"
+                placeholder={t.recurring.notePlaceholder}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
               />
             </div>
           </div>
@@ -347,62 +358,65 @@ export function RecurringScreen() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-2xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-cyan-400 disabled:opacity-60"
+            className="w-full rounded-2xl border-2 border-slate-900 bg-gradient-to-r from-cyan-400 to-sky-500 px-4 py-3 text-sm font-bold text-white transition hover:brightness-105 disabled:opacity-60"
           >
             {isSubmitting
-              ? t.recurring?.creating || "Creating..."
-              : t.recurring?.createButton || "Create recurring transaction"}
+              ? t.recurring.creating
+              : t.recurring.createButton}
           </button>
         </form>
 
         {error ? (
-          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             {error}
           </p>
         ) : null}
         {success ? (
-          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
             {success}
           </p>
         ) : null}
 
-        <section className="rounded-3xl border border-slate-300 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">
-            {t.recurring?.listTitle || "Your recurring rules"}
+        <section className="rounded-3xl border-2 border-slate-900 bg-white p-5 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.4)]">
+          <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
+            {t.recurring.listTitle}
           </h2>
 
           {isLoading ? (
-            <p className="mt-3 text-sm text-slate-500">{t.recurring?.loading || "Loading..."}</p>
+            <p className="mt-3 text-sm text-slate-500">{t.recurring.loading}</p>
           ) : rules.length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">
-              {t.recurring?.empty || "No recurring transactions yet."}
+              {t.recurring.empty}
             </p>
           ) : (
             <div className="mt-4 space-y-3">
               {rules.map((rule) => (
-                <article key={rule.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <article
+                  key={rule.id}
+                  className="rounded-2xl border border-slate-200 bg-gradient-to-r from-white to-sky-50 p-4"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-base font-semibold text-slate-900">{rule.title}</p>
+                      <p className="text-base font-bold text-slate-900">{rule.title}</p>
                       <p className="text-sm text-slate-500">
                         {rule.type === "income"
-                          ? t.transactions?.income || "Income"
-                          : t.transactions?.expense || "Expense"}{" "}
+                          ? t.transactions.income
+                          : t.transactions.expense}{" "}
                         | {formatCurrency(rule.amount, rule.account?.currency || "RM")}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         {rule.frequency === "daily"
-                          ? t.recurring?.daily || "Daily"
+                          ? t.recurring.daily
                           : rule.frequency === "weekly"
-                          ? t.recurring?.weekly || "Weekly"
-                          : t.recurring?.monthly || "Monthly"}
+                          ? t.recurring.weekly
+                          : t.recurring.monthly}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {(t.recurring?.nextRun || "Next run") + ": " + formatRuleDate(rule.nextRunDate)}
+                        {t.recurring.nextRun + ": " + formatRuleDate(rule.nextRunDate, locale)}
                       </p>
                       {rule.note ? (
                         <p className="mt-1 text-xs text-slate-500">
-                          {(t.recurring?.notePreviewLabel || "Note") + ": " + rule.note}
+                          {t.recurring.notePreviewLabel + ": " + rule.note}
                         </p>
                       ) : null}
                     </div>
@@ -414,8 +428,8 @@ export function RecurringScreen() {
                       }`}
                     >
                       {rule.isActive
-                        ? t.recurring?.active || "Active"
-                        : t.recurring?.pausedLabel || "Paused"}
+                        ? t.recurring.active
+                        : t.recurring.pausedLabel}
                     </span>
                   </div>
 
@@ -423,18 +437,18 @@ export function RecurringScreen() {
                     <button
                       type="button"
                       onClick={() => toggleRule(rule, !rule.isActive)}
-                      className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                       {rule.isActive
-                        ? t.recurring?.pause || "Pause"
-                        : t.recurring?.resume || "Resume"}
+                        ? t.recurring.pause
+                        : t.recurring.resume}
                     </button>
                     <button
                       type="button"
                       onClick={() => setPendingDeleteId(rule.id)}
-                      className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700"
+                      className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
                     >
-                      {t.recurring?.delete || "Delete"}
+                      {t.recurring.delete}
                     </button>
                   </div>
                 </article>
@@ -446,12 +460,12 @@ export function RecurringScreen() {
 
       {pendingDeleteId ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-3xl border border-slate-300 bg-white p-5">
-            <h3 className="text-lg font-semibold text-slate-900">
-              {t.recurring?.deleteConfirmTitle || "Delete this recurring transaction?"}
+          <div className="w-full max-w-sm rounded-3xl border-2 border-slate-900 bg-white p-5 shadow-[0_20px_45px_-26px_rgba(15,23,42,0.45)]">
+            <h3 className="text-lg font-extrabold text-slate-900">
+              {t.recurring.deleteConfirmTitle}
             </h3>
             <p className="mt-2 text-sm text-slate-600">
-              {t.recurring?.deleteConfirmDesc || "You can create it again later if needed."}
+              {t.recurring.deleteConfirmDesc}
             </p>
             <div className="mt-4 flex gap-3">
               <button
@@ -464,7 +478,7 @@ export function RecurringScreen() {
               <button
                 type="button"
                 onClick={() => deleteRule(pendingDeleteId)}
-                className="flex-1 rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white"
+                className="flex-1 rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-400"
               >
                 {t.common.ok}
               </button>

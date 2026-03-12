@@ -147,3 +147,61 @@ body[data-search-open="true"] .dashboard-main {
     opacity: 1;
   }
 }
+
+.liquid-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(147, 230, 255, 0.92) 0%, rgba(83, 211, 244, 0.9) 48%, rgba(43, 188, 231, 0.95) 100%);
+  background-size: 100% 100%;
+  box-shadow: inset 0 10px 24px rgba(14, 116, 144, 0.15);
+  pointer-events: none;
+}
+
+.liquid-surface {
+  position: absolute;
+  left: -36%;
+  width: 172%;
+  top: -24px;
+  height: 58px;
+  border-radius: 46%;
+  background:
+    radial-gradient(120% 120% at 50% 100%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.5) 36%, rgba(255, 255, 255, 0) 74%);
+  transform-origin: 50% 100%;
+}
+
+.liquid-surface-a {
+  opacity: 0.92;
+  animation: liquid-slosh-a 2.2s ease-in-out infinite alternate;
+}
+
+.liquid-surface-b {
+  top: -30px;
+  height: 64px;
+  opacity: 0.58;
+  filter: blur(0.8px);
+  background:
+    radial-gradient(120% 120% at 50% 100%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.36) 40%, rgba(255, 255, 255, 0) 75%);
+  animation: liquid-slosh-b 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes liquid-slosh-a {
+  0% {
+    transform: translateX(-16%) rotate(-2.3deg) scaleX(0.94);
+  }
+  100% {
+    transform: translateX(16%) rotate(2.3deg) scaleX(1.08);
+  }
+}
+
+@keyframes liquid-slosh-b {
+  0% {
+    transform: translateX(20%) rotate(2.8deg) scaleX(1.12);
+  }
+  100% {
+    transform: translateX(-20%) rotate(-2.8deg) scaleX(0.9);
+  }
+}

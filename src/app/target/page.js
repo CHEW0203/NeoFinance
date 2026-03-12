@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
+import { getLocaleFromLanguage } from "@/lib/i18n";
 import { useTransactions } from "@/hooks/use-transactions";
 import { getLocalDateKey } from "@/utils/date-key";
 import { formatCurrency } from "@/utils/format";
@@ -27,6 +28,23 @@ function safeParse(value, fallback) {
   }
 }
 
+function formatCompactCurrency(amount, currency = "RM") {
+  const value = Number(amount || 0);
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+
+  if (abs >= 1_000_000_000) {
+    return `${currency} ${sign}${Math.round(abs / 1_000_000_000)}B`;
+  }
+  if (abs >= 1_000_000) {
+    return `${currency} ${sign}${Math.round(abs / 1_000_000)}M`;
+  }
+  if (abs >= 10_000) {
+    return `${currency} ${sign}${Math.round(abs / 1_000)}K`;
+  }
+  return formatCurrency(value, currency);
+}
+
 function isSameDay(first, second) {
   return (
     first.getFullYear() === second.getFullYear() &&
@@ -35,7 +53,7 @@ function isSameDay(first, second) {
   );
 }
 
-function appendNotification({ title, message }) {
+function appendNotification({ title, message, locale }) {
   const now = new Date();
   const existing = safeParse(window.localStorage.getItem(NOTIFICATIONS_KEY), []);
   const next = [
@@ -44,7 +62,7 @@ function appendNotification({ title, message }) {
       id: `target-${now.getTime()}-${Math.floor(Math.random() * 1000)}`,
       title,
       message,
-      time: now.toLocaleString(),
+      time: now.toLocaleString(locale),
       isRead: false,
     },
   ];
@@ -55,7 +73,7 @@ function appendNotification({ title, message }) {
 function getFriendlyErrorMessage(error, t) {
   const message = String(error?.message || "").toLowerCase();
   if (message.includes("high demand") || message.includes("quota") || message.includes("rate")) {
-    return t?.target?.fallback?.busy || "(._.) Please wait a moment and try again.";
+    return t.target.fallback.busy;
   }
   return null;
 }
@@ -72,10 +90,10 @@ async function fetchPersonaMessage(payload, language) {
       signal: controller.signal,
     });
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data?.error || "Failed to generate response.");
-    }
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.error || "");
+  }
 
     return data?.text || "";
   } catch (error) {
@@ -92,6 +110,7 @@ async function fetchPersonaMessage(payload, language) {
 
 export default function TargetPage() {
   const { language, t } = useLanguage();
+  const locale = getLocaleFromLanguage(language);
   const { transactions, isLoading } = useTransactions();
   const [personaPrompt, setPersonaPrompt] = useState("");
   const [personaReply, setPersonaReply] = useState("");
@@ -123,16 +142,15 @@ export default function TargetPage() {
   const targetNotifications = targetCopy.notifications || {};
 
   const askTargetFallback =
-    targetFallback.askTarget || targetCopy.defaultReply || "(._.) How much do you want to spend today?";
-  const idleTipFallback =
-    targetFallback.idleTip || "(._.) Tip: keep your spending tied to your priorities.";
+    targetFallback.askTarget || targetCopy.defaultReply;
+  const idleTipFallback = targetFallback.idleTip;
 
   const notificationTitles = {
-    targetSet: targetNotifications.targetSet || "Target Set",
-    halfwayAlert: targetNotifications.halfwayAlert || "Halfway Alert",
-    targetReached: targetNotifications.targetReached || "Target Reached",
-    overBudget: targetNotifications.overBudget || "Over Budget",
-    daySummary: targetNotifications.daySummary || "Day Summary",
+    targetSet: targetNotifications.targetSet,
+    halfwayAlert: targetNotifications.halfwayAlert,
+    targetReached: targetNotifications.targetReached,
+    overBudget: targetNotifications.overBudget,
+    daySummary: targetNotifications.daySummary,
   };
 
   function updatePersonaReply(text) {
@@ -143,7 +161,7 @@ export default function TargetPage() {
   }
 
   function resolveTimeoutErrorMessage() {
-    return targetErrors.requestTimeout || "Request timed out. Please try again.";
+    return targetErrors.requestTimeout;
   }
 
   async function loadCurrentBalance() {
@@ -403,13 +421,12 @@ export default function TargetPage() {
             },
             language
           );
-          appendNotification({ title: notificationTitles.targetSet, message: text });
+          appendNotification({ title: notificationTitles.targetSet, message: text, locale });
           if (text) updatePersonaReply(text);
         } catch (err) {
           const friendly = getFriendlyErrorMessage(err, t);
-          const fallback =
-            friendly || targetFallback.encourageStart || "(._.) Keep it steady today and watch your spending.";
-          appendNotification({ title: notificationTitles.targetSet, message: fallback });
+          const fallback = friendly || targetFallback.encourageStart;
+          appendNotification({ title: notificationTitles.targetSet, message: fallback, locale });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -431,13 +448,12 @@ export default function TargetPage() {
             },
             language
           );
-          appendNotification({ title: notificationTitles.halfwayAlert, message: text });
+          appendNotification({ title: notificationTitles.halfwayAlert, message: text, locale });
           if (text) updatePersonaReply(text);
         } catch (err) {
           const friendly = getFriendlyErrorMessage(err, t);
-          const fallback =
-            friendly || targetFallback.cautionHalf || "(._.) You are halfway there. Keep it under control.";
-          appendNotification({ title: notificationTitles.halfwayAlert, message: fallback });
+          const fallback = friendly || targetFallback.cautionHalf;
+          appendNotification({ title: notificationTitles.halfwayAlert, message: fallback, locale });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -459,13 +475,12 @@ export default function TargetPage() {
             },
             language
           );
-          appendNotification({ title: notificationTitles.targetReached, message: text });
+          appendNotification({ title: notificationTitles.targetReached, message: text, locale });
           if (text) updatePersonaReply(text);
         } catch (err) {
           const friendly = getFriendlyErrorMessage(err, t);
-          const fallback =
-            friendly || targetFallback.targetReached || "(._.) You have reached your target for today.";
-          appendNotification({ title: notificationTitles.targetReached, message: fallback });
+          const fallback = friendly || targetFallback.targetReached;
+          appendNotification({ title: notificationTitles.targetReached, message: fallback, locale });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -487,13 +502,12 @@ export default function TargetPage() {
             },
             language
           );
-          appendNotification({ title: notificationTitles.overBudget, message: text });
+          appendNotification({ title: notificationTitles.overBudget, message: text, locale });
           if (text) updatePersonaReply(text);
         } catch (err) {
           const friendly = getFriendlyErrorMessage(err, t);
-          const fallback =
-            friendly || targetFallback.overBudget || "(>_<) You are over budget. Pause spending for now.";
-          appendNotification({ title: notificationTitles.overBudget, message: fallback });
+          const fallback = friendly || targetFallback.overBudget;
+          appendNotification({ title: notificationTitles.overBudget, message: fallback, locale });
           updatePersonaReply(fallback);
         } finally {
           setIsReplying(false);
@@ -519,6 +533,7 @@ export default function TargetPage() {
     notificationTitles.halfwayAlert,
     notificationTitles.targetReached,
     notificationTitles.overBudget,
+    locale,
   ]);
 
   function handleTargetSubmit(event) {
@@ -526,7 +541,7 @@ export default function TargetPage() {
     if (!targetInput.trim()) return;
     const numeric = Number(targetInput);
     if (Number.isNaN(numeric) || numeric <= 0) {
-      setError(targetErrors.invalidTarget || "Please enter a valid target amount.");
+      setError(targetErrors.invalidTarget);
       return;
     }
 
@@ -571,13 +586,12 @@ export default function TargetPage() {
           },
           language
         );
-        appendNotification({ title: notificationTitles.targetSet, message: text });
+        appendNotification({ title: notificationTitles.targetSet, message: text, locale });
         if (text) updatePersonaReply(text);
       } catch (err) {
         const friendly = getFriendlyErrorMessage(err, t);
-        const fallback =
-          friendly || targetFallback.encourageStart || "(._.) Keep it steady today and watch your spending.";
-        appendNotification({ title: notificationTitles.targetSet, message: fallback });
+        const fallback = friendly || targetFallback.encourageStart;
+        appendNotification({ title: notificationTitles.targetSet, message: fallback, locale });
         updatePersonaReply(fallback);
       } finally {
         setIsReplying(false);
@@ -588,7 +602,7 @@ export default function TargetPage() {
   async function handleQuestionSubmit(event) {
     event.preventDefault();
     if (!personaPrompt) {
-      setError(targetErrors.personalityRequired || "Please set your personality first.");
+      setError(targetErrors.personalityRequired);
       return;
     }
     if (!questionInput.trim()) return;
@@ -616,7 +630,7 @@ export default function TargetPage() {
       if (err?.code === TIMEOUT_ERROR_CODE) {
         setError(resolveTimeoutErrorMessage());
       } else {
-        setError(targetErrors.questionFailed || "Failed to answer your question.");
+        setError(targetErrors.questionFailed);
       }
     } finally {
       setIsQuestionLoading(false);
@@ -644,15 +658,11 @@ export default function TargetPage() {
 
   const ringColor = isOverBudget ? "#ef4444" : "#22c55e";
   const ringProgress = isOverBudget ? 1 : progressRemaining;
-  const remainingDisplay =
-    remaining === null
-      ? ""
-      : remaining < 0
-        ? `-${formatCurrency(Math.abs(remaining), "RM")}`
-        : formatCurrency(remaining, "RM");
+  const remainingDisplay = remaining === null ? "" : formatCompactCurrency(remaining, "RM");
+  const remainingDisplayFull = remaining === null ? "" : formatCurrency(remaining, "RM");
 
   const confirmTargetLabel = pendingTarget
-    ? (targetCopy.confirmTarget || "Confirm RM {amount} for today?").replace(
+    ? targetCopy.confirmTarget.replace(
         "{amount}",
         Number(pendingTarget).toFixed(2)
       )
@@ -669,41 +679,45 @@ export default function TargetPage() {
     hasBalanceInfo && pendingTarget !== null && Number(pendingTarget) > currentBalance;
 
   const exceedsBalanceLabel = pendingTargetExceedsBalance
-    ? (targetCopy.targetExceedsBalance || "Target RM {target} is higher than balance RM {balance}.")
+    ? targetCopy.targetExceedsBalance
         .replace("{target}", Number(pendingTarget).toFixed(2))
         .replace("{balance}", Number(currentBalance).toFixed(2))
     : "";
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff5d6_0%,#fff9e8_35%,#e8f3ff_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col pb-28">
         <div className="flex items-center justify-between">
           <BackButton fallbackHref="/" preferFallback />
           <Link
             href="/target/change"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-transparent px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900 hover:text-slate-950"
+            className="inline-flex items-center gap-2 rounded-full border-2 border-slate-900 bg-white px-4 py-2 text-sm font-bold text-slate-800 transition hover:bg-amber-100"
           >
             {personaPrompt
-              ? targetCopy.changePersonality || "Change Personality"
-              : targetCopy.setPersonality || "Set Personality"}
+              ? targetCopy.changePersonality
+              : targetCopy.setPersonality}
           </Link>
         </div>
 
         <div className="mt-6 flex flex-1 flex-col gap-6">
             {!personaPrompt ? (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                {targetCopy.setupPrompt || "Set your AI personality first, then it can guide your budget."}
+              <div className="rounded-2xl border-2 border-slate-900 bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-800">
+                {targetCopy.setupPrompt}
               </div>
             ) : null}
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-              <p>{personaReply || askTargetFallback}</p>
+            <div className="relative overflow-hidden rounded-3xl border-2 border-slate-900 bg-gradient-to-br from-amber-200 via-yellow-100 to-sky-100 px-5 py-4 text-sm text-slate-700 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+              <span className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-white/40" />
+              <span className="pointer-events-none absolute -left-6 -bottom-8 h-20 w-20 rounded-full bg-cyan-200/40" />
+              <div className="relative z-10 flex items-center justify-between gap-3">
+                <p className="font-medium text-slate-800">{personaReply || askTargetFallback}</p>
               {isReplying ? (
-                <span className="ai-dots" aria-label="Loading">
+                <span className="ai-dots" aria-label={t.common.loading}>
                   <span className="ai-dot" />
                   <span className="ai-dot" />
                   <span className="ai-dot" />
                 </span>
               ) : null}
+              </div>
             </div>
 
             <div className="flex flex-col items-center gap-4">
@@ -719,59 +733,60 @@ export default function TargetPage() {
                   {targetAmount ? (
                     <>
                       <p
-                        className={`text-3xl font-semibold ${
+                        className={`text-4xl font-extrabold tracking-tight ${
                           remaining !== null && remaining < 0 ? "text-red-500" : "text-emerald-600"
                         }`}
+                        title={remainingDisplayFull}
                       >
                         {remainingDisplay}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-sm font-semibold text-slate-500">
                         {remaining !== null && remaining < 0
-                          ? targetCopy.overBudget || "Over budget"
-                          : targetCopy.remainingToday || "Remaining today"}
+                          ? targetCopy.overBudget
+                          : targetCopy.remainingToday}
                       </p>
                     </>
                   ) : (
                     <>
-                      <p className="text-2xl font-semibold text-slate-400">
-                        {targetCopy.setTarget || "Set target"}
+                      <p className="text-3xl font-bold text-slate-500">
+                        {targetCopy.setTarget}
                       </p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {targetCopy.dailyLimit || "Daily limit in RM"}
+                      <p className="mt-1 text-sm font-semibold text-slate-400">
+                        {targetCopy.dailyLimit}
                       </p>
                     </>
                   )}
                 </div>
               </div>
 
-              <form onSubmit={handleTargetSubmit} className="flex w-full max-w-sm flex-col gap-3">
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
-                  <span className="text-sm font-semibold text-slate-500">RM</span>
+              <form onSubmit={handleTargetSubmit} className="flex w-full max-w-md flex-col gap-3 rounded-3xl border-2 border-slate-900 bg-white/95 p-4 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                  <span className="text-base font-bold text-slate-600">RM</span>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={targetInput}
                     onChange={(event) => setTargetInput(event.target.value)}
-                    placeholder={targetCopy.setTargetPlaceholder || "Set today's target"}
-                    className="flex-1 bg-transparent text-sm text-slate-700 outline-none"
+                    placeholder={targetCopy.setTargetPlaceholder}
+                    className="flex-1 bg-transparent text-base font-semibold text-slate-700 outline-none"
                     disabled={Boolean(targetAmount)}
                   />
                   <button
                     type="submit"
                     disabled={Boolean(targetAmount)}
-                    className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full border-2 border-slate-900 bg-cyan-300 px-4 py-2 text-sm font-bold text-slate-900 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {targetCopy.setButton || "Set"}
+                    {targetCopy.setButton}
                   </button>
                 </div>
 
-                <div className="px-1 text-xs">
+                <div className="px-1 text-sm">
                   {isBalanceLoading ? (
                     <p className="text-slate-400">...</p>
                   ) : hasBalanceInfo ? (
                     <p className="text-slate-500">
-                      {(targetCopy.currentBalance || "Current balance") + ": "}
+                      {targetCopy.currentBalance + ": "}
                       <span className="font-semibold text-slate-700">
                         {formatCurrency(currentBalance, "RM")}
                       </span>
@@ -779,7 +794,7 @@ export default function TargetPage() {
                   ) : null}
                   {targetInputExceedsBalance ? (
                     <p className="mt-1 font-semibold text-amber-600">
-                      {(targetCopy.targetExceedsBalance || "Target RM {target} is higher than balance RM {balance}.")
+                      {targetCopy.targetExceedsBalance
                         .replace("{target}", Number(inputValueNumber).toFixed(2))
                         .replace("{balance}", Number(currentBalance).toFixed(2))}
                     </p>
@@ -787,7 +802,7 @@ export default function TargetPage() {
                 </div>
 
                 {pendingTarget ? (
-                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-600 shadow-sm">
+                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-amber-50 px-4 py-3 text-sm text-slate-700 shadow-sm">
                     <div className="space-y-1">
                       <p>{confirmTargetLabel}</p>
                       {pendingTargetExceedsBalance ? (
@@ -798,35 +813,35 @@ export default function TargetPage() {
                       <button
                         type="button"
                         onClick={handleConfirmTarget}
-                        className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                        className="rounded-full border-2 border-slate-900 bg-emerald-300 px-4 py-2 text-sm font-bold text-slate-900"
                       >
-                        {targetCopy.confirm || "Confirm"}
+                        {targetCopy.confirm}
                       </button>
                       <button
                         type="button"
                         onClick={handleCancelTarget}
-                        className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600"
+                        className="rounded-full border-2 border-slate-400 bg-white px-4 py-2 text-sm font-bold text-slate-700"
                       >
-                        {t?.common?.cancel || "Cancel"}
+                        {t.common.cancel}
                       </button>
                     </div>
                   </div>
                 ) : null}
               </form>
 
-              <div className="flex items-center gap-3 text-xs text-slate-400">
+              <div className="flex items-center gap-3 text-sm text-slate-500">
                 {targetAmount ? (
                   <>
-                    <span>{targetCopy.spentToday || "Spent today:"} </span>
+                    <span>{targetCopy.spentToday} </span>
                     <span className={isOverBudget ? "text-red-500" : "text-slate-400"}>
                       {formatCurrency(spentToday, "RM")}
                     </span>
                     <button
                       type="button"
                       onClick={handleResetTarget}
-                      className="text-xs font-semibold text-slate-500 underline underline-offset-2 transition hover:text-slate-700"
+                      className="rounded-full border-2 border-slate-500 bg-white px-4 py-2 text-base font-bold text-slate-700 transition hover:border-slate-900 hover:text-slate-900"
                     >
-                      {targetCopy.resetTarget || "Reset target"}
+                      {targetCopy.resetTarget}
                     </button>
                   </>
                 ) : null}
@@ -837,7 +852,7 @@ export default function TargetPage() {
 
       <form
         onSubmit={handleQuestionSubmit}
-        className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white/90 px-4 py-3 backdrop-blur"
+        className="fixed bottom-0 left-0 right-0 border-t-2 border-slate-900/15 bg-white/92 px-4 py-3 backdrop-blur"
       >
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3">
           <input
@@ -846,18 +861,18 @@ export default function TargetPage() {
             onChange={(event) => setQuestionInput(event.target.value)}
             placeholder={
               personaPrompt
-                ? targetCopy.questionPlaceholder || "If you have any financial questions, ask below."
-                : targetCopy.setPersonalityFirst || "Set personality first to chat with AI."
+                ? targetCopy.questionPlaceholder
+                : targetCopy.setPersonalityFirst
             }
-            className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none"
+            className="flex-1 rounded-full border-2 border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none focus:border-cyan-500"
             disabled={isQuestionLoading || !personaPrompt}
           />
           <button
             type="submit"
             disabled={isQuestionLoading || !questionInput.trim() || !personaPrompt}
-            className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border-2 border-slate-900 bg-amber-300 px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {targetCopy.sendButton || "Send"}
+            {targetCopy.sendButton}
           </button>
         </div>
       </form>
@@ -870,7 +885,7 @@ export default function TargetPage() {
 
       {isBlocking ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70">
-          <div className="target-loader" aria-label="Loading">
+          <div className="target-loader" aria-label={t.common.loading}>
             <span className="target-dot dot-1" />
             <span className="target-dot dot-2" />
             <span className="target-dot dot-3" />

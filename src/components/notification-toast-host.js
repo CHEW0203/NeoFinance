@@ -179,7 +179,7 @@ export function NotificationToastHost() {
 
   if (!active) return null;
 
-  const title = active.title || t?.pages?.newNotification || "New notification";
+  const title = active.title || t.pages.newNotification;
   const message = active.message || "";
 
   function handleCancel() {
@@ -208,19 +208,18 @@ export function NotificationToastHost() {
             onClick={handleCancel}
             className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-slate-400"
           >
-            {t?.common?.cancel || "Cancel"}
+            {t.common.cancel}
           </button>
           <button
             type="button"
             onClick={handleDetails}
             className="rounded-full border border-sky-200 bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700 transition hover:border-sky-400"
           >
-            {t?.common?.details || "Details"}
+            {t.common.details}
           </button>
         </div>
       </div>
     </div>
   );
 }
-
 

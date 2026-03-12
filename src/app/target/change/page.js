@@ -11,7 +11,7 @@ const PERSONA_REPLY_KEY = "ft_persona_reply";
 function getFriendlyErrorMessage(error, t) {
   const message = String(error?.message || "").toLowerCase();
   if (message.includes("high demand") || message.includes("quota") || message.includes("rate")) {
-    return t?.target?.fallback?.busy || "(._.) Please wait a moment and try again.";
+    return t.target.fallback.busy;
   }
   return null;
 }
@@ -25,7 +25,7 @@ async function fetchPersonaMessage(payload, language) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data?.error || "Failed to generate response.");
+    throw new Error(data?.error || "");
   }
 
   return data?.text || "";
@@ -61,19 +61,16 @@ export default function ChangePersonalityPage() {
       );
       window.localStorage.setItem(
         PERSONA_REPLY_KEY,
-        text || targetCopy.defaultReply || "(._.) How much do you want to spend today?"
+        text || targetCopy.defaultReply
       );
     } catch (err) {
       const friendly = getFriendlyErrorMessage(err, t);
       window.localStorage.setItem(
         PERSONA_REPLY_KEY,
-        friendly || targetCopy.defaultReply || "(._.) How much do you want to spend today?"
+        friendly || targetCopy.defaultReply
       );
       // Keep as warning only; personality is already saved.
-      setError(
-        targetErrors.updatePersonalityFallback ||
-          "Personality saved. AI reply is temporarily unavailable, please try again later."
-      );
+      setError(targetErrors.updatePersonalityFallback);
     } finally {
       setIsLoading(false);
       router.push("/target");
@@ -81,7 +78,7 @@ export default function ChangePersonalityPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ecfeff_0%,#eef2ff_35%,#e2e8f0_100%)] px-4 py-6 text-slate-900 sm:px-6">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff5d6_0%,#fff9e8_35%,#e8f3ff_100%)] px-4 py-6 text-slate-900 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col">
         <div className="flex items-center justify-between">
           <BackButton fallbackHref="/target" preferFallback />
@@ -89,33 +86,35 @@ export default function ChangePersonalityPage() {
         </div>
 
         <div className="mt-10 flex flex-1 flex-col items-center justify-center gap-6">
-          <div className="text-center">
-            <p className="text-base font-semibold text-slate-900">
-              {targetCopy.changePersonality || "Change Personality"}
+          <section className="relative w-full max-w-2xl overflow-hidden rounded-3xl border-2 border-slate-900 bg-gradient-to-br from-amber-200 via-yellow-100 to-sky-100 p-7 text-center shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+            <span className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/40" />
+            <span className="pointer-events-none absolute -left-6 -bottom-8 h-20 w-20 rounded-full bg-cyan-200/40" />
+            <p className="relative z-10 text-2xl font-extrabold tracking-tight text-slate-900">
+              {targetCopy.changePersonality}
             </p>
-            <p className="mt-2 text-sm text-slate-400">
-              {targetCopy.changePersonalityDesc || "Describe the new personality you want to use."}
+            <p className="relative z-10 mt-2 text-sm font-medium text-slate-700">
+              {targetCopy.changePersonalityDesc}
             </p>
-          </div>
+          </section>
 
           <form
             onSubmit={handleSubmit}
-            className="flex w-full max-w-lg items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm"
+            className="flex w-full max-w-2xl items-center gap-3 rounded-3xl border-2 border-slate-900 bg-white/95 px-4 py-3 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]"
           >
             <input
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder={targetCopy.personaPlaceholder || "For example: strict but supportive"}
-              className="flex-1 bg-transparent text-sm text-slate-700 outline-none"
+              placeholder={targetCopy.personaPlaceholder}
+              className="flex-1 bg-transparent text-base font-medium text-slate-700 outline-none"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading}
-              className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full border-2 border-slate-900 bg-cyan-300 px-5 py-2.5 text-base font-bold text-slate-900 shadow-sm transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {targetCopy.updatePersonality || "Update"}
+              {targetCopy.updatePersonality}
             </button>
           </form>
         </div>
@@ -129,7 +128,7 @@ export default function ChangePersonalityPage() {
 
       {isLoading ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70">
-          <div className="target-loader" aria-label="Loading">
+          <div className="target-loader" aria-label={t.common.loading}>
             <span className="target-dot dot-1" />
             <span className="target-dot dot-2" />
             <span className="target-dot dot-3" />

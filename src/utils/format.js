@@ -10,6 +10,6 @@ export function formatTransactionAmount(type, amount) {
   return `${symbol} ${formatCurrency(amount)}`;
 }
 
-export function formatDate(dateValue) {
-  return new Date(dateValue).toLocaleDateString();
+export function formatDate(dateValue, locale) {
+  return new Date(dateValue).toLocaleDateString(locale);
 }

@@ -20,8 +20,8 @@ export function useLoginForm(nextPath = "/", messages = {}) {
       await loginUser(form);
       router.push(nextPath || "/");
       router.refresh();
-    } catch (requestError) {
-      setError(requestError.message || messages.loginFailed || "Failed to login.");
+    } catch {
+      setError(messages.loginFailed);
     } finally {
       setIsSubmitting(false);
     }
@@ -50,13 +50,11 @@ export function useRegisterForm(messages = {}) {
     event.preventDefault();
     setError("");
     if (form.password !== form.confirmPassword) {
-      setError(
-        messages.passwordMismatch || "Password and confirm password do not match."
-      );
+      setError(messages.passwordMismatch);
       return;
     }
     if (form.password.length < 8) {
-      setError(messages.passwordTooShort || "Password must be at least 8 characters.");
+      setError(messages.passwordTooShort);
       return;
     }
 
@@ -68,8 +66,8 @@ export function useRegisterForm(messages = {}) {
       });
       router.push("/login");
       router.refresh();
-    } catch (requestError) {
-      setError(requestError.message || messages.registerFailed || "Failed to register.");
+    } catch {
+      setError(messages.registerFailed);
     } finally {
       setIsSubmitting(false);
     }

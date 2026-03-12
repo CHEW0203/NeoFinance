@@ -13,6 +13,10 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
   const { language, setLanguage, t } = useLanguage(initialLanguage);
   const { unreadCount, ready: notificationsReady } = useNotifications();
   const badgeLabel = unreadCount >= 9 ? "9+" : `${unreadCount}+`;
+  const unreadAriaLabel = (t?.menu?.unreadNotifications || "{count} unread notifications").replace(
+    "{count}",
+    badgeLabel
+  );
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,6 +95,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
     setSearchResults([]);
   }
 
+  const menuItemClass =
+    "flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-xs font-semibold text-slate-800";
+
   return (
     <>
       <nav className="relative flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
@@ -108,6 +115,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
         </p>
       ) : null}
         <div className="flex items-center gap-3 whitespace-nowrap text-2xl text-slate-800">
+          <Link href="/streak" aria-label={t.menu.streak} title={t.menu.streak}>
+            {"\u{1F525}"}
+          </Link>
           <Link
             href="/notifications"
             aria-label={t.menu.notification}
@@ -118,13 +128,13 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
             {notificationsReady && unreadCount > 0 ? (
               <span
                 className="absolute right-0 top-0 flex h-5 min-w-[1.25rem] -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white"
-                aria-label={`${badgeLabel} unread notifications`}
+                aria-label={unreadAriaLabel}
               >
                 {badgeLabel}
               </span>
             ) : null}
           </Link>
-          <Link href="/target" aria-label={t.menu.target || "Target"} title={t.menu.target || "Target"}>
+          <Link href="/target" aria-label={t.menu.target} title={t.menu.target}>
             {"\u{1F3AF}"}
           </Link>
           <Link href="/calendar" aria-label={t.menu.calendar} title={t.menu.calendar}>
@@ -134,8 +144,8 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
       </nav>
 
       {searchOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-white pt-20 sm:pt-24">
-          <div className="w-full max-w-3xl rounded-2xl bg-white p-4 shadow-xl sm:p-6">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-slate-900/25 pt-20 backdrop-blur-[2px] sm:pt-24">
+          <div className="w-full max-w-3xl rounded-2xl border border-white/70 bg-white/95 p-4 shadow-xl sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
               <input
                 aria-label={t.menu.search}
@@ -162,6 +172,11 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                 transactions={searchResults}
                 isLoading={isSearching}
                 onDelete={() => {}}
+                language={language}
+                colorizeByType
+                loadingLabel={t.menu.searching}
+                emptyLabel={t.menu.noSearchResults}
+                uncategorizedLabel={t.pages?.reportUncategorized}
               />
             </div>
           </div>
@@ -176,8 +191,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-full border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700"
+                className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700"
               >
+                <span className="text-[10px]">{"\u2715"}</span>
                 {t.menu.close}
               </button>
             </div>
@@ -192,7 +208,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                         setOpen(false);
                         setSearchOpen(true);
                       }}
-                      className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
                       <span className="text-sm">{"\u{1F50D}"}</span>
                       {t.menu.search}
@@ -200,51 +216,42 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                     <Link
                       href="/profile"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
+                      <span className="text-sm">{"\u{1F464}"}</span>
                       {t.common.profile}
                     </Link>
                     <Link
                       href="/scan"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
+                      <span className="text-sm">{"\u{1F4F7}"}</span>
                       {t.menu.scan}
                     </Link>
                     <Link
                       href="/gallery"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
+                      <span className="text-sm">{"\u{1F5BC}\uFE0F"}</span>
                       {t.menu.gallery}
                     </Link>
                     <Link
                       href="/report"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
+                      <span className="text-sm">{"\u{1F4CA}"}</span>
                       {t.menu.report}
                     </Link>
                     <Link
                       href="/recurring"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
-                      {t.menu.recurring || "Recurring"}
-                    </Link>
-                    <Link
-                      href="/streak"
-                      onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
-                    >
-                      {t.menu.streak}
-                    </Link>
-                    <Link
-                      href="/notifications"
-                      onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
-                    >
-                      {t.menu.notification}
+                      <span className="text-sm">{"\u267B\uFE0F"}</span>
+                      {t.menu.recurring}
                     </Link>
                   </>
                 ) : (
@@ -252,15 +259,17 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                     <Link
                       href="/login"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
+                      <span className="text-sm">{"\u{1F510}"}</span>
                       {t.common.login}
                     </Link>
                     <Link
                       href="/register"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-800"
+                      className={menuItemClass}
                     >
+                      <span className="text-sm">{"\u{1F4DD}"}</span>
                       {t.common.register}
                     </Link>
                   </>
@@ -279,8 +288,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       language === "en"
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                         : "border-slate-300 text-slate-700"
-                    }`}
+                    } flex items-center justify-center gap-1`}
                   >
+                    <span>{"\u{1F1EC}\u{1F1E7}"}</span>
                     EN
                   </button>
                   <button
@@ -290,8 +300,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       language === "zh"
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                         : "border-slate-300 text-slate-700"
-                    }`}
+                    } flex items-center justify-center gap-1`}
                   >
+                    <span>{"\u{1F1E8}\u{1F1F3}"}</span>
                     {"\u4e2d\u6587"}
                   </button>
                   <button
@@ -301,8 +312,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       language === "ms"
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                         : "border-slate-300 text-slate-700"
-                    }`}
+                    } flex items-center justify-center gap-1`}
                   >
+                    <span>{"\u{1F1F2}\u{1F1FE}"}</span>
                     BM
                   </button>
                 </div>
@@ -313,8 +325,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="mt-3 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-xs font-semibold text-slate-800"
+                className={`${menuItemClass} mt-3`}
               >
+                <span className="text-sm">{"\u{1F6AA}"}</span>
                 {t.common.logout}
               </button>
             ) : null}
@@ -324,10 +337,4 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
     </>
   );
 }
-
-
-
-
-
-
 

@@ -157,6 +157,7 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
       window.removeEventListener("neo:target-updated", onTargetUpdated);
       window.removeEventListener("neo:transactions-updated", onTxnUpdated);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   const usageRatio = useMemo(() => {
@@ -170,7 +171,7 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
         href="/login?next=/target"
         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 shadow-sm"
       >
-        {t?.target?.setTarget || "Set target"}
+        {t.target.setTarget}
       </Link>
     );
   }
@@ -181,7 +182,7 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
         href="/target"
         className="w-full rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-center text-sm font-semibold text-cyan-900 shadow-sm transition hover:bg-cyan-100"
       >
-        {t?.target?.setTargetPlaceholder || "Set today's target"}
+        {t.target.setTargetPlaceholder}
       </Link>
     );
   }
@@ -203,10 +204,10 @@ export function TargetBudgetBar({ isAuthenticated = false }) {
     >
       <div className="mb-2 flex items-center justify-between text-sm font-semibold">
         <span className="text-slate-600">
-          {(t?.target?.setTarget || "Target")}: {formatCurrency(targetAmount, "RM")}
+          {t.target.setTarget}: {formatCurrency(targetAmount, "RM")}
         </span>
         <span className={remainingColor}>
-          {(t?.target?.remainingToday || "Remaining today")}: {isLoading ? "..." : `${remaining < 0 ? "-" : ""}${formatCurrency(Math.abs(remaining), "RM")}`}
+          {t.target.remainingToday}: {isLoading ? "..." : `${remaining < 0 ? "-" : ""}${formatCurrency(Math.abs(remaining), "RM")}`}
         </span>
       </div>
 

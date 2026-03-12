@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useLoginForm } from "@/hooks/use-auth-form";
-import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
 
 export function LoginScreen({ nextPath = "/transactions" }) {
@@ -17,7 +16,6 @@ export function LoginScreen({ nextPath = "/transactions" }) {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_35%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
       <div className="mx-auto w-full max-w-2xl">
         <section className="rounded-[2rem] border border-white/70 bg-white/85 p-8 shadow-[0_28px_70px_-36px_rgba(15,23,42,0.45)] backdrop-blur">
-          <BackButton fallbackHref="/" />
           <p className="text-lg font-semibold uppercase tracking-[0.28em] text-indigo-700">
             {t.auth.access}
           </p>

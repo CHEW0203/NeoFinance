@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
+import { getLocalizedCategoryLabel } from "@/lib/i18n/category-labels";
 import { getLocalDateKey } from "@/utils/date-key";
 
 const ICONS = {
@@ -159,8 +160,8 @@ const LOCALIZED_BASE_LABELS = {
 
 const LEGACY_HIDDEN_EXPENSE_NAMES = new Set(["breakfast", "lunch", "dinner"]);
 
-function parseApiError(error, fallback) {
-  return error?.message || fallback;
+function parseApiError(_error, fallback) {
+  return fallback;
 }
 
 function normalizeName(value) {
@@ -402,7 +403,7 @@ export function TransactionScreen({ recordId }) {
       return;
     }
     if (!title.trim() && !category) {
-      setError("Please enter a title.");
+      setError(t.transactions.titleRequired);
       return;
     }
 
@@ -571,7 +572,7 @@ export function TransactionScreen({ recordId }) {
                   : "border-slate-900 bg-amber-100";
               const label = item.baseKey
                 ? getLocalizedBaseName(language, item.baseKey, item.name)
-                : item.name;
+                : getLocalizedCategoryLabel(item.name, language);
 
               return (
                 <button
@@ -646,7 +647,7 @@ export function TransactionScreen({ recordId }) {
               href="/scan"
               className="flex w-full items-center justify-center rounded-2xl border border-rose-300 bg-rose-100 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-200"
             >
-              {t.scan?.scanReceipt || "Scan receipt"}
+              {t.scan.scanReceipt}
             </Link>
           ) : null}
         </form>

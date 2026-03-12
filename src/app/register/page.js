@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRegisterForm } from "@/hooks/use-auth-form";
-import { BackButton } from "@/components/back-button";
 import { useLanguage } from "@/hooks/use-language";
 
 export default function RegisterPage() {
@@ -19,7 +18,6 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#dcfce7_0%,#f8fafc_35%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
       <div className="mx-auto w-full max-w-3xl rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_24px_70px_-38px_rgba(15,23,42,0.45)] backdrop-blur">
-        <BackButton fallbackHref="/login" />
         <p className="text-lg font-semibold uppercase tracking-[0.28em] text-emerald-700">
           {t.auth.createTitle}
         </p>

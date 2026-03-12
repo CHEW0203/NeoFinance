@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { formatCurrency } from "@/utils/format";
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
 function formatCompactCurrency(amount, currency = "RM") {
   const value = Number(amount || 0);
   const abs = Math.abs(value);
@@ -36,8 +40,11 @@ export function BalancePie({
   const total = expense + income;
   const expensePercent = total > 0 ? Math.round((expense / total) * 100) : 50;
   const incomePercent = Math.max(0, 100 - expensePercent);
+  const capacity = Math.max(income, expense, Math.abs(balance) + expense, 1);
+  const liquidLevel = clamp(balance <= 0 ? 0.06 : balance / capacity, 0.06, 0.95);
   const fullBalanceLabel = formatCurrency(balance, currency);
   const compactBalanceLabel = formatCompactCurrency(balance, currency);
+  const isLongBalanceLabel = compactBalanceLabel.length >= 9;
 
   const gradientStyle = {
     background: `conic-gradient(#f6c953 0% ${expensePercent}%, #49b4dc ${expensePercent}% ${expensePercent + incomePercent}%, #f6c953 ${expensePercent + incomePercent}% 100%)`,
@@ -51,7 +58,7 @@ export function BalancePie({
           className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 transition hover:border-amber-300 hover:bg-amber-100"
         >
           <p className="text-sm font-semibold text-amber-700">
-            {labels.dayExpense || "Expense"}
+            {labels.dayExpense}
           </p>
           <p className="text-2xl font-bold tracking-tight text-slate-900">
             {formatCurrency(expense, currency)}
@@ -62,7 +69,7 @@ export function BalancePie({
           className="rounded-2xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-right transition hover:border-cyan-300 hover:bg-cyan-100"
         >
           <p className="text-sm font-semibold text-cyan-700">
-            {labels.dayIncome || "Income"}
+            {labels.dayIncome}
           </p>
           <p className="text-2xl font-bold tracking-tight text-slate-900">
             {formatCurrency(income, currency)}
@@ -74,12 +81,25 @@ export function BalancePie({
         style={gradientStyle}
       >
         {forecastWidget ? <div className="absolute -right-2 -top-2 z-10">{forecastWidget}</div> : null}
-        <div className="flex h-full w-full items-center justify-center rounded-full bg-white text-center">
-          <div>
-            <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-              {labels.balance || "Balance"}
-            </p>
-            <p className="mt-2 text-4xl font-bold tracking-tight text-slate-950" title={fullBalanceLabel}>
+        <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-cyan-100 bg-white text-center">
+          <div
+            className="liquid-fill absolute inset-x-0 bottom-0 z-0 transition-[height] duration-700"
+            style={{ height: `${Math.round(liquidLevel * 100)}%` }}
+            aria-hidden="true"
+          >
+            <span className="liquid-surface liquid-surface-a" />
+            <span className="liquid-surface liquid-surface-b" />
+          </div>
+          <div className="relative z-10 px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{labels.balance}</p>
+            <p
+              className={`mx-auto mt-2 max-w-[11.5rem] whitespace-nowrap font-bold leading-none tracking-tight text-slate-950 ${
+                isLongBalanceLabel
+                  ? "text-[clamp(1.45rem,4.3vw,2.2rem)]"
+                  : "text-[clamp(1.85rem,5.6vw,2.85rem)]"
+              }`}
+              title={fullBalanceLabel}
+            >
               {compactBalanceLabel}
             </p>
           </div>
@@ -87,7 +107,7 @@ export function BalancePie({
       </div>
       <div className="mt-3 flex justify-center">
         <div className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
-          {(labels.savings || "Savings") + ": " + formatCurrency(savingsBalance, currency)}
+          {labels.savings + ": " + formatCurrency(savingsBalance, currency)}
         </div>
       </div>
       {budgetBar ? <div className="mt-4">{budgetBar}</div> : null}

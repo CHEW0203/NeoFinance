@@ -46,7 +46,7 @@ export default function ProfilePage() {
       setUsername(profileResult.user.username);
       setRows(txnRows || []);
     } catch (requestError) {
-      setError(requestError.message || t.profile.loadFailed);
+      setError(t.profile.loadFailed);
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +91,7 @@ export default function ProfilePage() {
       setSuccess(t.profile.updated);
       await loadAll();
     } catch (requestError) {
-      setError(requestError.message || t.profile.updateFailed);
+      setError(t.profile.updateFailed);
     } finally {
       setIsSaving(false);
     }
@@ -99,7 +99,7 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe_0%,#f8fafc_38%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff5d6_0%,#fff9e8_36%,#e8f3ff_100%)] px-6 py-10 text-slate-900 lg:px-10">
         <div className="mx-auto w-full max-w-5xl">
           <BackButton fallbackHref="/" />
           <p className="mt-6 text-sm text-slate-600">{t.profile.loadingProfile}</p>
@@ -109,21 +109,23 @@ export default function ProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#e0f2fe_0%,#f8fafc_38%,#e2e8f0_100%)] px-6 py-10 text-slate-900 lg:px-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#fff5d6_0%,#fff9e8_36%,#e8f3ff_100%)] px-6 py-10 text-slate-900 lg:px-10">
       <div className="mx-auto w-full max-w-5xl space-y-6">
         <BackButton fallbackHref="/" />
 
-        <section className="rounded-[2rem] border border-white/70 bg-white/90 p-8 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)]">
+        <section className="relative overflow-hidden rounded-[2rem] border-2 border-slate-900 bg-gradient-to-br from-amber-200 via-yellow-100 to-sky-100 p-8 shadow-[0_24px_70px_-36px_rgba(15,23,42,0.4)]">
+          <span className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/40" />
+          <span className="pointer-events-none absolute -left-6 -bottom-8 h-20 w-20 rounded-full bg-cyan-200/40" />
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-cyan-700">
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-cyan-800">
                 {t.profile.title}
               </p>
-              <h1 className="mt-2 text-4xl font-semibold tracking-tight text-slate-950">
+              <h1 className="mt-2 text-4xl font-extrabold tracking-tight text-slate-950">
                 {profile?.username}
               </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                {(t.profile.memberSince || "Member since")}{" "}
+              <p className="mt-1 text-sm font-medium text-slate-600">
+                {t.profile.memberSince}{" "}
                 {profile?.createdAt ? dateValue(profile.createdAt, language) : "-"}
               </p>
             </div>
@@ -131,7 +133,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                 {t.profile.transactions}
               </p>
@@ -139,25 +141,25 @@ export default function ProfilePage() {
                 {profile?.transactionCount || 0}
               </p>
             </div>
-            <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+            <div className="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-white p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-cyan-700">
-                {t.profile.totalIncome || "Total income"}
+                {t.profile.totalIncome}
               </p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">
                 {formatCurrency(incomeTotal, "RM")}
               </p>
             </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
-                {t.profile.totalExpense || "Total expense"}
+                {t.profile.totalExpense}
               </p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">
                 {formatCurrency(expenseTotal, "RM")}
               </p>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">
-                {t.profile.savings || "Savings"}
+                {t.profile.savings}
               </p>
               <p className="mt-2 text-2xl font-semibold text-slate-900">
                 {formatCurrency(profile?.savingsAmount || 0, "RM")}
@@ -165,13 +167,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <form className="mt-6 space-y-4" onSubmit={handleSave}>
+          <form className="mt-6 space-y-4 rounded-3xl border-2 border-slate-900/15 bg-white/85 p-5" onSubmit={handleSave}>
             <input
               type="text"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               placeholder={t.auth.username}
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-600"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-cyan-600"
               required
             />
             <input
@@ -179,12 +181,12 @@ export default function ProfilePage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder={t.profile.newPassword}
-              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-cyan-600"
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-base outline-none focus:border-cyan-600"
             />
             <button
               type="submit"
               disabled={isSaving}
-              className="rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl border-2 border-slate-900 bg-cyan-400 px-5 py-3 text-base font-bold text-slate-900 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? t.profile.saving : t.profile.saveProfile}
             </button>
@@ -203,13 +205,13 @@ export default function ProfilePage() {
         </section>
 
         <section className="grid gap-5 md:grid-cols-2">
-          <article className="rounded-3xl border border-cyan-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">
-              {t.profile.incomeTransactions || "Income transactions"}
+          <article className="rounded-3xl border-2 border-slate-900 bg-white/95 p-5 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-900">
+              {t.profile.incomeTransactions}
             </h2>
             <div className="mt-3 space-y-2">
               {incomeRows.slice(0, 8).map((row) => (
-                <div key={row.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                <div key={row.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-cyan-50/50 to-white px-3 py-2">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{row.title}</p>
                     <p className="text-xs text-slate-500">{dateValue(row.transactionDate, language)}</p>
@@ -218,18 +220,18 @@ export default function ProfilePage() {
                 </div>
               ))}
               {incomeRows.length === 0 ? (
-                <p className="text-sm text-slate-500">{t.profile.noIncomeTransactions || "No income transactions yet."}</p>
+                <p className="text-sm text-slate-500">{t.profile.noIncomeTransactions}</p>
               ) : null}
             </div>
           </article>
 
-          <article className="rounded-3xl border border-amber-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-900">
-              {t.profile.expenseTransactions || "Expense transactions"}
+          <article className="rounded-3xl border-2 border-slate-900 bg-white/95 p-5 shadow-[0_20px_45px_-28px_rgba(15,23,42,0.45)]">
+            <h2 className="text-xl font-extrabold tracking-tight text-slate-900">
+              {t.profile.expenseTransactions}
             </h2>
             <div className="mt-3 space-y-2">
               {expenseRows.slice(0, 8).map((row) => (
-                <div key={row.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                <div key={row.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-gradient-to-r from-amber-50/60 to-white px-3 py-2">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">{row.title}</p>
                     <p className="text-xs text-slate-500">{dateValue(row.transactionDate, language)}</p>
@@ -238,7 +240,7 @@ export default function ProfilePage() {
                 </div>
               ))}
               {expenseRows.length === 0 ? (
-                <p className="text-sm text-slate-500">{t.profile.noExpenseTransactions || "No expense transactions yet."}</p>
+                <p className="text-sm text-slate-500">{t.profile.noExpenseTransactions}</p>
               ) : null}
             </div>
           </article>
