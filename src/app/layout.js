@@ -14,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Financial Tracker and Analysis",
-  description: "Track spending, budgets, savings, and financial performance.",
+  title: "NeoFinance",
+  description: "NeoFinance - smart finance tracking and analysis.",
+  icons: {
+    icon: "/nf-icon.svg",
+    shortcut: "/nf-icon.svg",
+    apple: "/nf-icon.svg",
+  },
 };
 
 export default async function RootLayout({ children }) {
