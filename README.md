@@ -186,20 +186,10 @@ NeoFinance integrates Gemini API for:
 
 All final product logic, design decisions, and validations remain controlled by the development team.
 
-## Internationalization
-
-NeoFinance supports:
-
-- English (`en`)
-- Chinese (`zh`)
-- Bahasa Melayu (`ms`)
-
-Language selection is available in the menu and persisted for the full app experience.
-
 ## Project Structure (High-Level)
 
 ```text
-Financial-Tracker-and-Analysis/
+NeoFinance/
 ├─ prisma/                  # Prisma schema, local DB, seed script
 ├─ public/                  # Static assets and app icon
 ├─ src/
