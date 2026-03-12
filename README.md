@@ -10,9 +10,10 @@ Unlike basic expense trackers, NeoFinance combines account security, transaction
 - Report Link: [TBD]()
 
 ## Core Features
-
-- Secure authentication (`register`, `login`, `logout`) with session-based access.
+- Secure authentication (register, login, logout) with session-based access.
 - Dashboard with expense/income overview, dynamic balance ring, savings, and daily target progress.
+- Daily target budget setting with real-time remaining balance tracking, over-budget alerts, and visual spending progress.
+- Personality-based AI analysis that adapts guidance style and provides contextual finance advice.
 - Transaction module with add/edit/delete, icon-based category selection, and custom categories.
 - AI-assisted category handling and receipt interpretation (Gemini API integration).
 - Receipt scan workflow and receipt gallery storage.
@@ -22,7 +23,7 @@ Unlike basic expense trackers, NeoFinance combines account security, transaction
 - AI cashflow forecast (7-day and 30-day outlook) and report-level AI guidance.
 - Notification center (read/delete/select-delete/all-delete workflows).
 - Streak module for daily recording consistency.
-- Full multilingual support: English (`en`), Chinese (`zh`), Bahasa Melayu (`ms`).
+- Full multilingual support: English (en), Chinese (zh), Bahasa Melayu (ms).
 
 ## Tech Stack
 
