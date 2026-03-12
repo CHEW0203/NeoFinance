@@ -13,7 +13,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
   const { language, setLanguage, t } = useLanguage(initialLanguage);
   const { unreadCount, ready: notificationsReady } = useNotifications();
   const badgeLabel = unreadCount >= 9 ? "9+" : `${unreadCount}+`;
-  const unreadAriaLabel = (t?.menu?.unreadNotifications || "{count} unread notifications").replace(
+  const unreadAriaLabel = t.menu.unreadNotifications.replace(
     "{count}",
     badgeLabel
   );
@@ -337,4 +337,3 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
     </>
   );
 }
-

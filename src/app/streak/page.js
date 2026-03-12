@@ -121,7 +121,7 @@ export default async function StreakPage({ searchParams }) {
 
         <section className="overflow-hidden rounded-[1.8rem] border-2 border-slate-900 bg-white shadow-[0_16px_35px_-24px_rgba(15,23,42,0.55)]">
           <header className="bg-sky-500 px-5 py-3 text-center text-xl font-bold text-white">
-            {t.pages.streakStartToday || "Start from today!"}
+            {t.pages.streakStartToday}
           </header>
 
           <div className="space-y-4 p-5">
@@ -180,7 +180,7 @@ export default async function StreakPage({ searchParams }) {
           href="/transactions"
           className="block rounded-full border-2 border-slate-900 bg-rose-400 px-5 py-4 text-center text-2xl font-extrabold text-white shadow-[0_16px_30px_-24px_rgba(15,23,42,0.55)] transition hover:bg-rose-300"
         >
-          {t.pages.recordDirectly || t.transactions?.addRecord || "Record Directly"}
+          {t.pages.recordDirectly}
         </Link>
 
         <section className="rounded-2xl border border-rose-100 bg-white/80 px-4 py-3 text-center text-sm text-slate-600">

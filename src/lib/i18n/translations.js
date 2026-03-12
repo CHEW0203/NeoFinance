@@ -106,7 +106,7 @@
     },
     pages: {
       notifications: "Notifications",
-      notificationsInbox: "Inbox",
+      notificationsInbox: "Peti Masuk",
       notificationsStories: "Stories",
       newNotification: "New notification",
       noNotification: "No notification yet.",

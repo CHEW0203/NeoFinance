@@ -23,11 +23,11 @@ export default function NotificationsPage() {
   }, [notifications]);
 
   const title = t.pages.notifications;
-  const inboxLabel = t.pages.notificationsInbox || "Inbox";
-  const storiesLabel = t.pages.notificationsStories || "Stories";
+  const inboxLabel = t.pages.notificationsInbox;
+  const storiesLabel = t.pages.notificationsStories;
   const markAllReadLabel = t.pages.markAllRead;
   const emptyLabel = t.pages.noNotification;
-  const emptyDesc = t.pages.noNotificationDesc || "Activities and system alerts will show up here.";
+  const emptyDesc = t.pages.noNotificationDesc;
   const defaultTitle = t.menu.notification;
   const selectDeleteLabel = t.pages.selectDelete;
   const cancelDeleteLabel = t.pages.cancelDelete;
