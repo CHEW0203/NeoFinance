@@ -66,8 +66,8 @@ npm -v
 ### 2. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/Financial-Tracker-and-Analysis.git
-cd Financial-Tracker-and-Analysis
+git clone https://github.com/<your-username>/NeoFinance.git
+cd NeoFinance
 ```
 
 ### 3. Install dependencies
