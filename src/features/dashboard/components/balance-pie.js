@@ -95,8 +95,8 @@ export function BalancePie({
             <p
               className={`mx-auto mt-2 max-w-[11.5rem] whitespace-nowrap font-bold leading-none tracking-tight text-slate-950 ${
                 isLongBalanceLabel
-                  ? "text-[clamp(1.45rem,4.3vw,2.2rem)]"
-                  : "text-[clamp(1.85rem,5.6vw,2.85rem)]"
+                  ? "text-[clamp(1.35rem,4.1vw,2.05rem)]"
+                  : "text-[clamp(1.7rem,5.1vw,2.65rem)]"
               }`}
               title={fullBalanceLabel}
             >

@@ -26,7 +26,9 @@ export default function NotificationsPage() {
   const inboxLabel = t.pages.notificationsInbox;
   const storiesLabel = t.pages.notificationsStories;
   const markAllReadLabel = t.pages.markAllRead;
-  const emptyLabel = t.pages.noNotification;
+  const inboxEmptyLabel = t.pages.noInboxes || "No inboxes yet.";
+  const storiesEmptyLabel = t.pages.noStories || "No stories yet.";
+  const emptyLabel = activeTab === "stories" ? storiesEmptyLabel : inboxEmptyLabel;
   const emptyDesc = t.pages.noNotificationDesc;
   const defaultTitle = t.menu.notification;
   const selectDeleteLabel = t.pages.selectDelete;

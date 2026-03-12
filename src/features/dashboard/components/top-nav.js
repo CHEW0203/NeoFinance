@@ -96,7 +96,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
   }
 
   const menuItemClass =
-    "flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-xs font-semibold text-slate-800";
+    "flex w-full items-center gap-3 border-b border-slate-200 px-4 py-4 text-left text-lg font-semibold text-slate-800";
 
   return (
     <>
@@ -184,9 +184,15 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
       ) : null}
 
       {open ? (
-        <div className="fixed inset-0 z-50 bg-black/40">
-          <aside className="flex h-full w-72 flex-col bg-white p-4 shadow-xl">
-            <div className="mb-3 flex items-center justify-between">
+        <div
+          className="fixed inset-0 z-50 bg-black/40"
+          onClick={() => setOpen(false)}
+        >
+          <aside
+            className="flex h-full w-72 flex-col bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-200 px-3 py-3">
               <p className="text-base font-semibold text-slate-900">{t.menu.menu}</p>
               <button
                 type="button"
@@ -198,8 +204,8 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
               </button>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-              <div className="flex flex-col gap-2">
+            <div className="flex-1 overflow-y-auto">
+              <div className="flex flex-col">
                 {currentUser ? (
                   <>
                     <button
@@ -210,7 +216,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       }}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u{1F50D}"}</span>
+                      <span className="text-xl">{"\u{1F50D}"}</span>
                       {t.menu.search}
                     </button>
                     <Link
@@ -218,7 +224,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       onClick={() => setOpen(false)}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u{1F464}"}</span>
+                      <span className="text-xl">{"\u{1F464}"}</span>
                       {t.common.profile}
                     </Link>
                     <Link
@@ -226,7 +232,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       onClick={() => setOpen(false)}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u{1F4F7}"}</span>
+                      <span className="text-xl">{"\u{1F4F7}"}</span>
                       {t.menu.scan}
                     </Link>
                     <Link
@@ -234,7 +240,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       onClick={() => setOpen(false)}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u{1F5BC}\uFE0F"}</span>
+                      <span className="text-xl">{"\u{1F5BC}\uFE0F"}</span>
                       {t.menu.gallery}
                     </Link>
                     <Link
@@ -242,7 +248,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       onClick={() => setOpen(false)}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u{1F4CA}"}</span>
+                      <span className="text-xl">{"\u{1F4CA}"}</span>
                       {t.menu.report}
                     </Link>
                     <Link
@@ -250,7 +256,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       onClick={() => setOpen(false)}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u267B\uFE0F"}</span>
+                      <span className="text-xl">{"\u267B\uFE0F"}</span>
                       {t.menu.recurring}
                     </Link>
                   </>
@@ -261,7 +267,7 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       onClick={() => setOpen(false)}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u{1F510}"}</span>
+                      <span className="text-xl">{"\u{1F510}"}</span>
                       {t.common.login}
                     </Link>
                     <Link
@@ -269,14 +275,14 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
                       onClick={() => setOpen(false)}
                       className={menuItemClass}
                     >
-                      <span className="text-sm">{"\u{1F4DD}"}</span>
+                      <span className="text-xl">{"\u{1F4DD}"}</span>
                       {t.common.register}
                     </Link>
                   </>
                 )}
               </div>
 
-              <section className="rounded-lg border border-slate-200 p-3">
+              <section className="border-t border-slate-200 px-3 py-2">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
                   {t.menu.language}
                 </p>
@@ -325,9 +331,9 @@ export function TopNav({ monthLabel, currentUser, initialLanguage = "en" }) {
               <button
                 type="button"
                 onClick={handleLogout}
-                className={`${menuItemClass} mt-3`}
+                className={`${menuItemClass} border-t border-slate-200`}
               >
-                <span className="text-sm">{"\u{1F6AA}"}</span>
+                <span className="text-xl">{"\u{1F6AA}"}</span>
                 {t.common.logout}
               </button>
             ) : null}

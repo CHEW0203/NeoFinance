@@ -23,10 +23,10 @@ export function BackButton({ fallbackHref = "/", preferFallback = false }) {
     <button
       type="button"
       onClick={handleBack}
-      className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:text-slate-950"
+      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-lg font-semibold text-slate-700 shadow-sm transition hover:border-slate-900 hover:text-slate-950"
+      aria-label={t.common.back}
     >
       <span aria-hidden="true">{"\u2190"}</span>
-      {t.common.back}
     </button>
   );
 }
