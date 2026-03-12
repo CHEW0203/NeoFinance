@@ -94,7 +94,7 @@ Then edit `.env`:
 
 ```env
 DATABASE_URL="file:./dev.db"
-GEMINI_API_KEY=
+GEMINI_API_KEY="Your_Gemini_API_Key_Paste_Here"
 ```
 
 Notes:
