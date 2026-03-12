@@ -10,9 +10,10 @@ Unlike basic expense trackers, NeoFinance combines account security, transaction
 - Report Link: [TBD]()
 
 ## Core Features
-
-- Secure authentication (`register`, `login`, `logout`) with session-based access.
+- Secure authentication (register, login, logout) with session-based access.
 - Dashboard with expense/income overview, dynamic balance ring, savings, and daily target progress.
+- Daily target budget setting with real-time remaining balance tracking, over-budget alerts, and visual spending progress.
+- Personality-based AI analysis that adapts guidance style and provides contextual finance advice.
 - Transaction module with add/edit/delete, icon-based category selection, and custom categories.
 - AI-assisted category handling and receipt interpretation (Gemini API integration).
 - Receipt scan workflow and receipt gallery storage.
@@ -22,7 +23,7 @@ Unlike basic expense trackers, NeoFinance combines account security, transaction
 - AI cashflow forecast (7-day and 30-day outlook) and report-level AI guidance.
 - Notification center (read/delete/select-delete/all-delete workflows).
 - Streak module for daily recording consistency.
-- Full multilingual support: English (`en`), Chinese (`zh`), Bahasa Melayu (`ms`).
+- Full multilingual support: English (en), Chinese (zh), Bahasa Melayu (ms).
 
 ## Tech Stack
 
@@ -66,8 +67,8 @@ npm -v
 ### 2. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/Financial-Tracker-and-Analysis.git
-cd Financial-Tracker-and-Analysis
+git clone https://github.com/<your-username>/NeoFinance.git
+cd NeoFinance
 ```
 
 ### 3. Install dependencies
@@ -94,7 +95,7 @@ Then edit `.env`:
 
 ```env
 DATABASE_URL="file:./dev.db"
-GEMINI_API_KEY=
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 Notes:
@@ -120,25 +121,7 @@ Open:
 
 - [http://localhost:3000](http://localhost:3000)
 
-### 7. (Optional) Use local custom host `neofinance.local`
-
-1. Edit `C:\Windows\System32\drivers\etc\hosts` as Administrator and add:
-
-```txt
-127.0.0.1 neofinance.local
-```
-
-2. Flush DNS:
-
-```powershell
-ipconfig /flushdns
-```
-
-3. Restart dev server, then open:
-
-- [http://neofinance.local:3000](http://neofinance.local:3000)
-
-### 8. Open Prisma Studio
+### 7. Open Prisma Studio
 
 ```bash
 npm run db:studio
@@ -204,20 +187,11 @@ NeoFinance integrates Gemini API for:
 
 All final product logic, design decisions, and validations remain controlled by the development team.
 
-## Internationalization
-
-NeoFinance supports:
-
-- English (`en`)
-- Chinese (`zh`)
-- Bahasa Melayu (`ms`)
-
-Language selection is available in the menu and persisted for the full app experience.
-
 ## Project Structure (High-Level)
 
 ```text
-Financial-Tracker-and-Analysis/
+NeoFinance/
+├─ .vscode/                  # VS Code workspace settings, including Prisma extension and tooling preferences
 ├─ prisma/                  # Prisma schema, local DB, seed script
 ├─ public/                  # Static assets and app icon
 ├─ src/
