@@ -67,7 +67,7 @@ npm -v
 ### 2. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/NeoFinance.git
+git clone https://github.com/CHEW0203/NeoFinance.git
 cd NeoFinance
 ```
 
