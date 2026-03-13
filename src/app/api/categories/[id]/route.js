@@ -38,6 +38,7 @@ async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {
       data: {
         name: "Others",
         type,
+        source: "system",
         icon: "\u{1F4E6}",
         color,
         userId,
@@ -64,13 +65,17 @@ export async function DELETE(_request, context) {
 
     const category = await prisma.category.findFirst({
       where: { id: categoryId, userId: user.id },
-      select: { id: true, type: true, name: true },
+      select: { id: true, type: true, name: true, source: true },
     });
     if (!category) {
       return NextResponse.json({ message: "Category not found." }, { status: 404 });
     }
 
     const normalizedName = String(category.name || "").trim().toLowerCase();
+    const normalizedSource = String(category.source || "user").trim().toLowerCase();
+    if (normalizedSource === "ai") {
+      return NextResponse.json({ message: "Basic category cannot be deleted." }, { status: 400 });
+    }
     const protectedSet =
       category.type === "income" ? PROTECTED_INCOME_NAMES : PROTECTED_EXPENSE_NAMES;
     if (protectedSet.has(normalizedName)) {

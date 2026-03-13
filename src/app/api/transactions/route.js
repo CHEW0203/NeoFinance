@@ -385,6 +385,7 @@ export async function POST(request) {
     let categoryName = body.categoryName ? String(body.categoryName).trim() : null;
     let categoryIcon = body.categoryIcon ? String(body.categoryIcon).trim() : null;
     let bodyCategoryId = body.categoryId; 
+    let newCategorySource = categoryName ? "user" : null;
     
     const amount = toPositiveNumber(body.amount);
     const transactionDate = body.transactionDate ? new Date(body.transactionDate) : new Date();
@@ -428,6 +429,7 @@ export async function POST(request) {
         } else if (aiResult.type === "new" && aiResult.name && aiResult.icon) {
           categoryName = normalizeCategoryName(type, aiResult.name);
           categoryIcon = normalizeCategoryIconForName(type, categoryName, aiResult.icon);
+          newCategorySource = "ai";
           console.log(`[AI System] Successfully generated new Category: ${categoryName} ${categoryIcon}`);
         }
       }
@@ -456,6 +458,7 @@ export async function POST(request) {
           data: {
             name: categoryName,
             type,
+            source: newCategorySource === "ai" ? "ai" : "user",
             icon: normalizeCategoryIconForName(type, categoryName, categoryIcon),
             color: categoryColor,
             userId: user.id,

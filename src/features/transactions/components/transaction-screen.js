@@ -251,19 +251,23 @@ function buildCategoryRows(rawRows) {
 
   for (const row of rawRows) {
     const safeType = row.type === "income" ? "income" : "expense";
+    const safeSource = row.source === "system" || row.source === "ai" ? row.source : "user";
     const rowName = String(row.name || "").trim();
     if (safeType === "expense" && LEGACY_HIDDEN_EXPENSE_NAMES.has(normalizeName(rowName))) {
       continue;
     }
     const baseCatalog = getBaseForType(safeType);
     const match = baseCatalog.find((base) => normalizeName(base.name) === normalizeName(rowName));
+    const isProtectedByName = isProtectedCategory(safeType, row.name);
+    const isSystemDefault = safeSource === "system" || (safeSource !== "ai" && isProtectedByName);
     const item = {
       ...row,
       name: rowName,
       type: safeType,
+      source: safeSource,
       icon: normalizeDisplayIcon(rowName, row.icon, match?.icon || ICONS.BOX),
       baseKey: match?.key || null,
-      isDefault: isProtectedCategory(safeType, row.name),
+      isDefault: isSystemDefault,
       isCustom: false,
     };
     rows.push(item);
@@ -276,6 +280,7 @@ function buildCategoryRows(rawRows) {
         id: `default-expense-${base.key}`,
         name: base.name,
         type: "expense",
+        source: "system",
         icon: base.icon,
         baseKey: base.key,
         isDefault: true,
@@ -290,6 +295,7 @@ function buildCategoryRows(rawRows) {
         id: `default-income-${base.key}`,
         name: base.name,
         type: "income",
+        source: "system",
         icon: base.icon,
         baseKey: base.key,
         isDefault: true,
@@ -332,9 +338,8 @@ export function TransactionScreen({ recordId }) {
   const selectedCategory = categories.find((item) => item.id === selectedCategoryId) || null;
   const canDeleteSelectedCategory = Boolean(
     selectedCategory &&
-      (selectedCategory.isCustom ||
-        (!selectedCategory.isDefault &&
-          !isProtectedCategory(selectedCategory.type, selectedCategory.name)))
+      (selectedCategory.isCustom || selectedCategory.source === "user") &&
+      !selectedCategory.isDefault
   );
   const customIconChoices = mode === "income" ? INCOME_ICON_CHOICES : EXPENSE_ICON_CHOICES;
   const pageBackgroundClass =
@@ -412,6 +417,7 @@ export function TransactionScreen({ recordId }) {
       type: mode,
       icon: isOthersCategoryName(normalizedName) ? ICONS.BOX : newCategoryIcon,
       baseKey: null,
+      source: "user",
       isDefault: false,
       isCustom: true,
     };

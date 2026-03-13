@@ -352,6 +352,7 @@ export async function PATCH(request, context) {
           data: {
             name: categoryName,
             type,
+            source: "user",
             icon: resolvedCategoryIcon,
             color: categoryColor,
             userId: currentUser.id,
