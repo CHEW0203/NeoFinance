@@ -34,32 +34,41 @@ function readCookieLanguage() {
 export function useLanguage(initialLanguage) {
   const router = useRouter();
   const [language, setLanguageState] = useState(() =>
-    normalizeLanguage(
-      initialLanguage || readStoredLanguage() || readCookieLanguage() || DEFAULT_LANGUAGE
-    )
+    normalizeLanguage(initialLanguage || DEFAULT_LANGUAGE)
   );
   const t = useMemo(() => getDictionary(language), [language]);
 
   useEffect(() => {
+    function resolveClientLanguage() {
+      return normalizeLanguage(
+        readStoredLanguage() || readCookieLanguage() || initialLanguage || DEFAULT_LANGUAGE
+      );
+    }
+
+    function syncLanguage() {
+      const next = resolveClientLanguage();
+      setLanguageState((prev) => (prev === next ? prev : next));
+    }
+
     function handleLanguageChanged(event) {
       const fromEvent = normalizeLanguage(event?.detail?.language || "");
-      const next = fromEvent || normalizeLanguage(readStoredLanguage() || readCookieLanguage());
+      const next = fromEvent || resolveClientLanguage();
       setLanguageState((prev) => (prev === next ? prev : next));
     }
 
     function handleStorage(event) {
       if (event.key && event.key !== LANGUAGE_STORAGE_KEY) return;
-      const next = normalizeLanguage(readStoredLanguage() || readCookieLanguage());
-      setLanguageState((prev) => (prev === next ? prev : next));
+      syncLanguage();
     }
 
+    syncLanguage();
     window.addEventListener(LANGUAGE_EVENT_NAME, handleLanguageChanged);
     window.addEventListener("storage", handleStorage);
     return () => {
       window.removeEventListener(LANGUAGE_EVENT_NAME, handleLanguageChanged);
       window.removeEventListener("storage", handleStorage);
     };
-  }, []);
+  }, [initialLanguage]);
 
   function setLanguage(nextLanguage) {
     const normalized = normalizeLanguage(nextLanguage);

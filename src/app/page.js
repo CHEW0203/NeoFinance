@@ -140,7 +140,12 @@ export default async function Home() {
             expenseHref="/report?type=expense"
             incomeHref="/report?type=income"
             forecastWidget={<ForecastWidget labels={t.forecast || {}} language={language} />}
-            budgetBar={<TargetBudgetBar isAuthenticated={Boolean(currentUser)} />}
+            budgetBar={
+              <TargetBudgetBar
+                isAuthenticated={Boolean(currentUser)}
+                initialLanguage={language}
+              />
+            }
           />
 
           <Link

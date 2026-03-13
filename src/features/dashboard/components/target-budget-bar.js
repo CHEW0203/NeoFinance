@@ -24,8 +24,8 @@ function mixColor(from, to, ratio) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-export function TargetBudgetBar({ isAuthenticated = false }) {
-  const { t } = useLanguage();
+export function TargetBudgetBar({ isAuthenticated = false, initialLanguage = "en" }) {
+  const { t } = useLanguage(initialLanguage);
   const [targetAmount, setTargetAmount] = useState(null);
   const [spentToday, setSpentToday] = useState(0);
   const [isLoading, setIsLoading] = useState(isAuthenticated);
