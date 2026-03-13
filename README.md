@@ -6,8 +6,9 @@ Unlike basic expense trackers, NeoFinance combines account security, transaction
 
 ## Demo and Report
 
-- YouTube Link: [TBD]()
-- Report Link: [Here](https://docs.google.com/document/d/10Rn1b4_KKPI1CFM_UtF7T8uSVcRprknJ1HT8q80YomI/edit?tab=t.ze03jlvs6izk)
+- YouTube Link: [Here](https://youtu.be/hYSMQ8REEVQ?si=GvzSQNDBQJQuBWH4)
+  
+- Report Link: [NeoFinance Report](https://github.com/user-attachments/files/25970221/NeoFinance.Report.2.pdf)
 
 ## Core Features
 - Secure authentication (register, login, logout) with session-based access.
