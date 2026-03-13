@@ -57,6 +57,7 @@ model Category {
   name         String
   type         String
   source       String        @default("user")
+  isArchived   Boolean       @default(false)
   icon         String?
   color        String?
   createdAt    DateTime      @default(now())

@@ -161,6 +161,7 @@ async function loadRecurringContext() {
         orderBy: { createdAt: "asc" },
       },
       categories: {
+        where: { isArchived: false },
         orderBy: { createdAt: "asc" },
       },
     },
@@ -186,6 +187,7 @@ export async function GET() {
           orderBy: { createdAt: "asc" },
         },
         categories: {
+          where: { isArchived: false },
           select: { id: true, name: true, type: true, icon: true },
           orderBy: { createdAt: "asc" },
         },

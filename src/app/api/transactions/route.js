@@ -50,6 +50,65 @@ function normalizeCategoryIconForName(type, categoryName, icon) {
   return icon ? String(icon).trim() : null;
 }
 
+function isValidEmojiIcon(icon) {
+  const value = String(icon || "").trim();
+  if (!value) return false;
+  return /\p{Extended_Pictographic}/u.test(value);
+}
+
+function inferIconFromText(type, text) {
+  const value = String(text || "").toLowerCase();
+  if (type === "income") {
+    if (value.includes("salary")) return "\u{1F4BC}";
+    if (value.includes("bonus")) return "\u{1F3C6}";
+    if (value.includes("invest")) return "\u{1F4C8}";
+    if (value.includes("refund")) return "\u{1F4B3}";
+    return "\u{1F4B0}";
+  }
+  if (value.includes("iphone") || value.includes("mobile") || value.includes("phone") || value.includes("smartphone") || value.includes("android") || value.includes("手机")) {
+    return "\u{1F4F1}";
+  }
+  if (value.includes("ipad") || value.includes("tablet")) return "\u{1F4F1}";
+  if (value.includes("laptop") || value.includes("macbook") || value.includes("computer")) {
+    return "\u{1F4BB}";
+  }
+  if (value.includes("food") || value.includes("meal") || value.includes("eat")) return "\u{1F354}";
+  if (value.includes("drink") || value.includes("coffee") || value.includes("tea")) return "\u2615";
+  if (value.includes("transport") || value.includes("grab") || value.includes("taxi") || value.includes("bus")) return "\u{1F68C}";
+  if (value.includes("gift")) return "\u{1F381}";
+  if (value.includes("rent") || value.includes("house")) return "\u{1F3E0}";
+  return "\u{1F4E6}";
+}
+
+function shouldForceMobileDeviceCategory(type, title, matchedCategoryName = "") {
+  if (type !== "expense") return false;
+  const value = String(title || "").toLowerCase();
+  const isPhoneLike =
+    value.includes("iphone") ||
+    value.includes("mobile") ||
+    value.includes("phone") ||
+    value.includes("smartphone") ||
+    value.includes("android") ||
+    value.includes("手机");
+  if (!isPhoneLike) return false;
+  const normalizedMatched = String(matchedCategoryName || "").trim().toLowerCase();
+  const broadCategoryNames = new Set([
+    "shopping",
+    "shop",
+    "others",
+    "other",
+    "misc",
+    "miscellaneous",
+    "food",
+    "transport",
+    "gift",
+    "rent",
+    "utilities",
+    "health",
+  ]);
+  return broadCategoryNames.has(normalizedMatched) || !normalizedMatched;
+}
+
 async function getAuthenticatedUserWithBaseData() {
   const currentUser = await requireCurrentUser();
   if (!currentUser) {
@@ -63,46 +122,12 @@ async function getAuthenticatedUserWithBaseData() {
         orderBy: { createdAt: "asc" },
       },
       categories: {
+        where: { isArchived: false },
         orderBy: { createdAt: "asc" },
       },
     },
   });
 }
-
-// Allowed icons for AI to choose from when creating a new category
-const EXPENSE_ICONS = [
-  "\u{1F35C}",
-  "\u2615",
-  "\u{1F354}",
-  "\u{1F355}",
-  "\u{1F6CD}\uFE0F",
-  "\u{1F381}",
-  "\u{1F68C}",
-  "\u{1F3AE}",
-  "\u{1F3B5}",
-  "\u{1F3E0}",
-  "\u{1F4F1}",
-  "\u{1F9FE}",
-  "\u{1F4E6}",
-];
-const INCOME_ICONS = [
-  "\u{1F4BC}",
-  "\u{1F4B0}",
-  "\u{1F4B8}",
-  "\u{1F3E6}",
-  "\u{1F4C8}",
-  "\u{1FA99}",
-  "\u{1F4B3}",
-  "\u{1F9E0}",
-  "\u{1F3AF}",
-  "\u{1F9FE}",
-  "\u{1F6E0}\uFE0F",
-  "\u{1F3C6}",
-  "\u{1F393}",
-  "\u{1F454}",
-  "\u{1F4CA}",
-  "\u{1F4E6}",
-];
 
 // ==========================================
 // AI Helper: Gemini 2.5 Flash Auto-Categorization
@@ -119,19 +144,18 @@ async function detectCategoryWithAI(title, userCategories, transactionType) {
     .filter(c => c.type === transactionType)
     .map(c => ({ id: c.id, name: c.name }));
 
-  const allowedIcons = transactionType === "expense" ? EXPENSE_ICONS : INCOME_ICONS;
-
   const prompt = `
-    You are a smart financial categorizer.
+    You are a smart financial categorizer for personal finance.
     Transaction Title: "${title}"
     Type: ${transactionType}
     Existing Categories: ${JSON.stringify(availableCategories)}
-    Allowed Icons for new category: ${JSON.stringify(allowedIcons)}
 
     Instruction:
-    1. If the title fits perfectly into one of the "Existing Categories", return its ID.
-    2. If it does NOT fit well, invent a short new category name and pick the most suitable icon from "Allowed Icons".
-    3. MUST output ONLY a valid JSON object. No other text or markdown formatting.
+    1. Return "existing" only when one existing category is a strong, precise match.
+    2. If it is specific (brand/product/object) and existing categories are too broad (e.g. shopping/others), return "new" with a specific category name.
+    3. For "new", choose one suitable emoji icon. You are NOT restricted to a fixed icon list.
+    4. Avoid generic names like "Shopping" when title gives specific intent.
+    5. MUST output ONLY a valid JSON object. No text or markdown.
 
     Output format MUST be exactly one of these:
     {"type": "existing", "id": "category_id_here"}
@@ -168,7 +192,22 @@ async function detectCategoryWithAI(title, userCategories, transactionType) {
     }
 
     const aiDecision = JSON.parse(aiTextResult);
-    return aiDecision;
+    if (aiDecision?.type === "existing" && aiDecision?.id) {
+      return { type: "existing", id: String(aiDecision.id).trim() };
+    }
+    if (aiDecision?.type === "new" && aiDecision?.name) {
+      const normalizedName = String(aiDecision.name).trim();
+      if (!normalizedName) return null;
+      const candidateIcon = String(aiDecision.icon || "").trim();
+      return {
+        type: "new",
+        name: normalizedName,
+        icon: isValidEmojiIcon(candidateIcon)
+          ? candidateIcon
+          : inferIconFromText(transactionType, `${title} ${normalizedName}`),
+      };
+    }
+    return null;
 
   } catch (error) {
     console.error("[AI System] Failed to parse AI response or network error:", error);
@@ -424,11 +463,24 @@ export async function POST(request) {
       
       if (aiResult) {
         if (aiResult.type === "existing" && aiResult.id) {
-          bodyCategoryId = aiResult.id;
-          console.log(`[AI System] Successfully matched existing Category ID: ${bodyCategoryId}`);
+          const matched = user.categories.find((item) => item.id === aiResult.id);
+          if (shouldForceMobileDeviceCategory(type, title, matched?.name)) {
+            categoryName = "Mobile Device";
+            categoryIcon = "\u{1F4F1}";
+            newCategorySource = "ai";
+            console.log("[AI System] Overrode broad existing category with specific AI category: Mobile Device");
+          } else {
+            bodyCategoryId = aiResult.id;
+            console.log(`[AI System] Successfully matched existing Category ID: ${bodyCategoryId}`);
+          }
         } else if (aiResult.type === "new" && aiResult.name && aiResult.icon) {
           categoryName = normalizeCategoryName(type, aiResult.name);
-          categoryIcon = normalizeCategoryIconForName(type, categoryName, aiResult.icon);
+          if (shouldForceMobileDeviceCategory(type, title, categoryName)) {
+            categoryName = "Mobile Device";
+            categoryIcon = "\u{1F4F1}";
+          } else {
+            categoryIcon = normalizeCategoryIconForName(type, categoryName, aiResult.icon);
+          }
           newCategorySource = "ai";
           console.log(`[AI System] Successfully generated new Category: ${categoryName} ${categoryIcon}`);
         }

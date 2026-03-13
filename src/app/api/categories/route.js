@@ -10,7 +10,7 @@ export async function GET() {
     }
 
     const categories = await prisma.category.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, isArchived: false },
       orderBy: [{ type: "asc" }, { createdAt: "asc" }],
       select: {
         id: true,

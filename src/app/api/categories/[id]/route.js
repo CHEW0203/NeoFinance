@@ -21,9 +21,10 @@ async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {
     where: {
       userId,
       type,
+      isArchived: false,
+      name: "Others",
       NOT: { id: excludedId },
     },
-    orderBy: { createdAt: "asc" },
     select: { id: true },
   });
 
@@ -39,6 +40,7 @@ async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {
         name: "Others",
         type,
         source: "system",
+        isArchived: false,
         icon: "\u{1F4E6}",
         color,
         userId,
@@ -64,7 +66,7 @@ export async function DELETE(_request, context) {
     }
 
     const category = await prisma.category.findFirst({
-      where: { id: categoryId, userId: user.id },
+      where: { id: categoryId, userId: user.id, isArchived: false },
       select: { id: true, type: true, name: true, source: true },
     });
     if (!category) {
@@ -90,25 +92,25 @@ export async function DELETE(_request, context) {
         where: { categoryId: category.id, userId: user.id },
       });
 
-      if (hasTransactions > 0 || hasRecurringRules > 0) {
+      if (hasRecurringRules > 0) {
         const fallbackId = await findOrCreateFallbackCategory(
           tx,
           user.id,
           category.type,
           category.id
         );
-        if (hasTransactions > 0) {
-          await tx.transaction.updateMany({
-            where: { categoryId: category.id, userId: user.id },
-            data: { categoryId: fallbackId },
-          });
-        }
-        if (hasRecurringRules > 0) {
-          await tx.recurringTransaction.updateMany({
-            where: { categoryId: category.id, userId: user.id },
-            data: { categoryId: fallbackId },
-          });
-        }
+        await tx.recurringTransaction.updateMany({
+          where: { categoryId: category.id, userId: user.id },
+          data: { categoryId: fallbackId },
+        });
+      }
+
+      if (hasTransactions > 0) {
+        await tx.category.update({
+          where: { id: category.id },
+          data: { isArchived: true },
+        });
+        return;
       }
 
       await tx.category.delete({

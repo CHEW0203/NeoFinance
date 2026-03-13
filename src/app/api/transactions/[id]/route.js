@@ -319,22 +319,21 @@ export async function PATCH(request, context) {
       return NextResponse.json({ message: "No account found for this user." }, { status: 400 });
     }
 
-    const defaultCategory = user.categories.find((item) => item.type === type);
+    const activeCategories = user.categories.filter((item) => !item.isArchived);
+    const defaultCategory = activeCategories.find((item) => item.type === type);
     const existingCategory =
       user.categories.find((item) => item.id === existing.categoryId) || null;
     const categoryById = body.categoryId
-      ? user.categories.find((item) => item.id === body.categoryId) || null
+      ? activeCategories.find((item) => item.id === body.categoryId) || null
       : null;
     const categoryByName = categoryName
-      ? user.categories.find(
+      ? activeCategories.find(
           (item) =>
             item.type === type && item.name.toLowerCase() === categoryName.toLowerCase()
         )
       : null;
-    const selectedCategory = categoryName
-      ? categoryByName || null
-      : categoryById || existingCategory || defaultCategory || null;
-    const existingColors = new Set(user.categories.map((item) => item.color).filter(Boolean));
+    const selectedCategory = categoryName ? categoryByName || null : categoryById || null;
+    const existingColors = new Set(activeCategories.map((item) => item.color).filter(Boolean));
     const categoryColor = pickCategoryColor(existingColors);
 
     const updated = await prisma.$transaction(async (tx) => {
@@ -370,11 +369,14 @@ export async function PATCH(request, context) {
           data: { icon: resolvedCategoryIcon },
         });
       }
+      if (!categoryId && existingCategory) {
+        categoryId = existingCategory.id;
+      }
       if (!categoryId && selectedCategory) {
         categoryId = selectedCategory.id;
       }
-      if (!categoryId && existingCategory) {
-        categoryId = existingCategory.id;
+      if (!categoryId && defaultCategory) {
+        categoryId = defaultCategory.id;
       }
 
       const oldDelta = existing.type === "income" ? existing.amount : -existing.amount;

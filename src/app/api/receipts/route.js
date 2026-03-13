@@ -214,6 +214,7 @@ async function getAuthenticatedUserWithBaseData() {
         orderBy: { createdAt: "asc" },
       },
       categories: {
+        where: { isArchived: false },
         orderBy: { createdAt: "asc" },
       },
     },
