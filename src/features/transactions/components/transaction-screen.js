@@ -77,10 +77,10 @@ const BASE_INCOME_CATEGORIES = [
 ];
 
 const PROTECTED_EXPENSE_NAMES = new Set(
-  BASE_EXPENSE_CATEGORIES.map((item) => item.name.toLowerCase())
+  ["food", "transport", "gift", "others"]
 );
 const PROTECTED_INCOME_NAMES = new Set(
-  BASE_INCOME_CATEGORIES.map((item) => item.name.toLowerCase())
+  ["salary", "allowance", "bonus"]
 );
 
 const EXPENSE_ICON_CHOICES = [
@@ -263,7 +263,7 @@ function buildCategoryRows(rawRows) {
       type: safeType,
       icon: normalizeDisplayIcon(rowName, row.icon, match?.icon || ICONS.BOX),
       baseKey: match?.key || null,
-      isDefault: Boolean(match || isProtectedCategory(safeType, row.name)),
+      isDefault: isProtectedCategory(safeType, row.name),
       isCustom: false,
     };
     rows.push(item);

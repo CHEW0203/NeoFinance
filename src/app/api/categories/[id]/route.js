@@ -4,15 +4,9 @@ import { pickCategoryColor } from "@/lib/category-colors";
 import { requireCurrentUser } from "@/lib/auth/session";
 
 const PROTECTED_EXPENSE_NAMES = new Set([
-  "snack",
-  "drinks",
   "food",
   "transport",
-  "shopping",
   "gift",
-  "rent",
-  "utilities",
-  "health",
   "others",
 ]);
 
@@ -20,10 +14,6 @@ const PROTECTED_INCOME_NAMES = new Set([
   "salary",
   "allowance",
   "bonus",
-  "freelance",
-  "investment",
-  "refund",
-  "others",
 ]);
 
 async function findOrCreateFallbackCategory(tx, userId, type, excludedId) {

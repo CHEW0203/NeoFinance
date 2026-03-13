@@ -90,13 +90,13 @@ export function BalancePie({
             <span className="liquid-surface liquid-surface-a" />
             <span className="liquid-surface liquid-surface-b" />
           </div>
-          <div className="relative z-10 px-4 py-3">
+          <div className="relative z-10 px-3 py-3">
             <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{labels.balance}</p>
             <p
-              className={`mx-auto mt-2 max-w-[11.5rem] whitespace-nowrap font-bold leading-none tracking-tight text-slate-950 ${
+              className={`mx-auto mt-2 max-w-[11rem] whitespace-nowrap font-bold leading-none tracking-tight text-slate-950 ${
                 isLongBalanceLabel
-                  ? "text-[clamp(1.35rem,4.1vw,2.05rem)]"
-                  : "text-[clamp(1.7rem,5.1vw,2.65rem)]"
+                  ? "text-[clamp(1.1rem,3.35vw,1.78rem)]"
+                  : "text-[clamp(1.5rem,4.7vw,2.35rem)]"
               }`}
               title={fullBalanceLabel}
             >
